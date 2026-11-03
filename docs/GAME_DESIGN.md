@@ -1,0 +1,5 @@
+# Beethoven: O Caminho de Casa
+Plataforma acolhedora para teclado, 480×270, arte fornecida pelo usuário e sprites normalizados. Beethoven adulto branco/caramelo, focinho comprido e orelhas assimétricas.
+Percurso: Beira-Mar → Costa Azul → Pedra Branca → Caminho Novo → Terra Nova. Fases com ossos opcionais, três corações, recuperação e pelo menos um checkpoint. Latido acalma cachorros por alguns segundos; não há combate. Chuva e pisos molhados na parte urbana. Plataformas móveis no parque. Último portão exige E.
+Movimento: aceleração, corrida, gravidade, coyote/buffer de 100 ms, altura variável, controle aéreo e colisões AABB. Quedas retiram vida e retornam ao último local seguro. Morte permite tentar do checkpoint.
+Introdução em seis cenas (72 segundos), transições que condensam deslocamentos entre cidades, final com abertura do portão e reencontro. Enter avança, Esc pula cutscenes. Save por fase, checkpoint, ossos identificados e configurações. A duração depende da exploração; deve ser medida em playtest humano.

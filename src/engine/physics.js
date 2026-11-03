@@ -1,0 +1,3 @@
+export const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+export function overlap(a,b){return a.x+a.w>b.x&&a.x<b.x+b.w&&a.y+a.h>b.y&&a.y<b.y+b.h}
+export function move(body,dt,solids){body.grounded=false;body.x+=body.vx*dt;for(const s of solids){if(s.oneWay)continue;if(overlap(body,s)){body.x=body.vx>0?s.x-body.w:s.x+s.w;body.vx=0}}const before=body.y+body.h;body.y+=body.vy*dt;for(const s of solids){if(!overlap(body,s))continue;if(s.oneWay&&!(body.vy>=0&&before<=s.y+3))continue;if(body.vy>=0&&before<=s.y+5){body.y=s.y-body.h;body.vy=0;body.grounded=true;body.x+=(s.dx||0)}else if(!s.oneWay&&body.vy<0){body.y=s.y+s.h;body.vy=0}}}

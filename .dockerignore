@@ -1,0 +1,10 @@
+.git
+.agents
+.codex
+.aws
+node_modules
+dist
+test-results
+__pycache__
+assets/**
+docs/screenshots

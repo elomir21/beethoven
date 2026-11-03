@@ -1,0 +1,4 @@
+export const KEY='beethoven.save.v1';
+export function fresh(){return {version:1,level:0,checkpoint:0,bones:[],completed:false,started:false,muted:false,unlocked:[0]}}
+export function validate(v){if(!v||v.version!==1||!Number.isInteger(v.level)||v.level<0||v.level>4)return fresh();return {...fresh(),level:v.level,checkpoint:Number.isFinite(v.checkpoint)?Math.max(0,Math.min(20000,v.checkpoint)):0,bones:Array.isArray(v.bones)?[...new Set(v.bones.filter(x=>typeof x==='string'&&/^\d+-\d+$/.test(x)))].slice(0,2000):[],completed:v.completed===true,started:v.started===true,muted:v.muted===true,unlocked:Array.isArray(v.unlocked)?v.unlocked.filter(x=>Number.isInteger(x)&&x>=0&&x<5):[0]}}
+export class Save {constructor(){try{this.data=validate(JSON.parse(localStorage.getItem(KEY)))}catch{this.data=fresh()}}write(){try{localStorage.setItem(KEY,JSON.stringify(this.data))}catch{}}reset(){const muted=this.data.muted;this.data=fresh();this.data.muted=muted;this.write()}}
