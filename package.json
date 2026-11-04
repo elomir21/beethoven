@@ -18,7 +18,8 @@
     "test:e2e": "node tests/e2e.mjs",
     "test:visual": "node tests/visual-mobile.mjs",
     "test:story": "node tests/parallax-family.mjs",
-    "verify": "npm run build && npm test && npm run test:e2e && npm run test:visual && npm run test:story"
+    "test:pages": "node tests/pages.mjs",
+    "verify": "npm run build && npm test && npm run test:e2e && npm run test:visual && npm run test:story && npm run test:pages"
   },
   "engines": {
     "node": ">=22.12.0"

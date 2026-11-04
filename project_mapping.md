@@ -79,7 +79,7 @@ play → over → retry / menu
 | TypeScript `^5.9.3` | Entrada tipada | [src/bootstrap.ts](src/bootstrap.ts), [tsconfig.json](tsconfig.json); `strict: true`, `allowJs: true`, `checkJs: false`, `noEmit: true`; somente bootstrap consta em `include` |
 | Canvas 2D / DOM / WebAudio / LocalStorage | Runtime cliente | `Renderer`, `Game.panel`, `AudioSystem`, `Save`; APIs nativas do navegador |
 | Phaser `3.90.0` | Dependência declarada para futura adoção | [package.json](package.json); **não utilizado pelo motor** |
-| Vite `^7.2.2` | Dev server, build e preview | [vite.config.js](vite.config.js); host `0.0.0.0`, porta 5173 estrita, target ES2022 |
+| Vite `^7.2.2` | Dev server, build e preview | [vite.config.js](vite.config.js); host `0.0.0.0`, porta 5173 estrita, target ES2022, base relativa `./` para hospedagem em subdiretórios |
 | Node `>=22.12.0` | Ferramentas e servidor | `engines` em `package.json`; Docker usa `node:24-bookworm-slim`; validação atual em container com Node 24.22.2; Node/npm ausentes do PATH do host |
 | npm | Dependências e scripts | `package.json`; não há `package-lock.json` nem `node_modules/` no workspace auditado |
 | Node test / assert / vm | Lógica, integração e build offline | `tests/*.test.mjs`, `scripts/build.mjs`; precisa de `--experimental-vm-modules` |
@@ -107,6 +107,7 @@ Não há ORM, framework de UI, banco, cache remoto, SDK cloud ou dependência de
 ├── Dockerfile                      Estágios development/test/build/production
 ├── docker-compose.yml              Serviços beethoven/dev/tests
 ├── .dockerignore / .gitignore      Exclusões de contexto e artefatos
+├── .github/workflows/pages.yml     Build, testes e deploy do dist no GitHub Pages
 ├── src/
 │   ├── bootstrap.ts                Entrada usada pelo Vite
 │   ├── main.js                     Game, cenas, regras e loop
@@ -157,7 +158,8 @@ Não há ORM, framework de UI, banco, cache remoto, SDK cloud ou dependência de
 │   ├── animals-input.test.mjs      Raças, gatos neutros, input e contratos dos atlas
 │   ├── story-render.test.mjs       Corrida direta, timeline e fase infinita
 │   ├── parallax-family.mjs         Pixels de emenda e abertura em Chromium
-│   └── visual-mobile.mjs           Qualidade 4K, layout e multitoque em browser
+│   ├── visual-mobile.mjs           Qualidade 4K, layout e multitoque em browser
+│   └── pages.mjs                   Build em /beethoven/, assets, toque/rotação e HTML offline
 ├── docker/mobile.env              Preset opcional para acesso pela rede local
 ├── docker/run.sh                   Preflight → teste → produção saudável
 ├── docs/
@@ -198,7 +200,7 @@ Criticidade: **alta** impede iniciar, controlar, salvar ou concluir a aventura; 
 | Catálogo de arte | src/data/assets.js, src/data/spriteFrames.js | Contratos de arquivo/grade/tamanho lógico, raças/pelagens e recortes gerados a partir dos PNGs; compartilhados entre Renderer, build, testes e QA | Alta |
 | Família e parallax | src/data/familyScene.js, src/render/parallax.js | Timeline determinística por cena/tempo; faixa cíclica com blend nativo de 6% e fase fracionária. Renderer desenha humanos/animais pelo mesmo método sprite | Média |
 | Shell visual | src/style.css, Game.panel/syncUI, index.html | Estágio 16:9; paisagem de toque/fullscreen usa maior retângulo possível com controles/toolbar sobrepostos; retrato normal usa controles abaixo; menus roláveis e safe areas | Média |
-| Build/distribuição | `scripts/build.mjs`, Vite | Dois caminhos de build, ambos produzem `dist`; geração offline usa sintaxe ES modules restrita | Alta para entrega |
+| Build/distribuição | `scripts/build.mjs`, Vite, `.github/workflows/pages.yml` | Dois caminhos de build produzem `dist`; Vite com base relativa; workflow valida e publica dist no Pages; geração offline usa sintaxe ES modules restrita | Alta para entrega |
 | Servidor | `scripts/serve.mjs` | HTTP nativo Node sem middleware/backend; serve raiz informada e aplica MIME/404 | Alta para HTTP; dispensável no HTML offline |
 | Assets/QA | `scripts/prepare_assets.py`, `scripts/render-qa.mjs` | Pillow normaliza frames; QA troca o contexto Canvas usando harness e grava PNGs | Média |
 | Validação | `tests/` | Node test, dois casos Vitest compartilhados, script E2E Playwright; sem testes enviados ao jogo | Alta para confiança na entrega |
@@ -238,6 +240,7 @@ Criticidade: **alta** impede iniciar, controlar, salvar ou concluir a aventura; 
 | Tela cheia | Botão Tela cheia/Sair | API padrão/WebKit sobre game-shell → acompanha fullscreenchange; API ausente/recusada ativa modo ampliado com aviso → Sair/Esc retorna | Inclui canvas, narrativa e controles; barras só são ocultadas pelo browser no fullscreen nativo | Média |
 | Áudio/mute | Clique em botão, Enter no menu ou toggle M/DOM | Desbloqueia AudioContext → sequências/efeitos só se contexto e não muted → mute salvo | Áudio falha sem impedir gameplay | Média |
 | Build Vite | `npm run build` | tsc → vite build → build.mjs --offline-only | Build web + Beethoven.html; sem execução de testes automática nesse comando | Alta |
+| Publicação Pages | Push em main ou workflow_dispatch | Node 24 → instalação → build → npm test → Chromium/test:pages → configurar Pages → upload dist → deploy protegido pelo ambiente github-pages | Depende de habilitar GitHub Actions como Source em Settings/Pages; configuração local não comprova deploy remoto | Alta |
 | Passeio da família | Intro, cenas 0…3 | introFamily(part,time) → prender guia → caminhada conjunta → rival → queda da guia → fuga/busca; sprites da família também no reencontro/final | Timeline apenas visual, sem alterar física, save ou duração das cenas | Média |
 | Build alternativo | `npm run build:legacy` ou Node direto | Parse JS por VM → apaga/recria dist → copia arquivos → troca entrada TS por JS → empacota HTML | Não executa TS/Vite nem browser | Alta |
 | QA visual | `render-qa.mjs` | Importa harness → troca contexto por canvas nativo → carrega PNGs → posiciona jogador → renderiza cinco níveis/final | Execução manual; não é screenshot de browser | Média |
@@ -296,7 +299,8 @@ Vite possui seus servidores de desenvolvimento/preview configurados em `vite.con
 | `npm run test:e2e` | Script Playwright independente |
 | `npm run test:visual` | Chromium desktop/4K, layout de celular, multitoque, cancelamento, save/pausa e orientação; relatório visual-mobile-report.json |
 | `npm run test:story` | Chromium: atlas humanos, alturas equivalentes, pixels de emenda/limite nos cinco cenários e capturas de cenas da abertura; story-assets-report.json |
-| `npm run verify` | build → test → test:e2e → test:visual → test:story |
+| `npm run test:pages` | Chromium em servidor temporário exclusivo /beethoven/: nove imagens, movimento, link inicial, corrida por toque, rotação e HTML offline; pages-report.json |
+| `npm run verify` | build → test → test:e2e → test:visual → test:story → test:pages |
 
 Outras interfaces: `python3 scripts/prepare_assets.py`, `node scripts/render-qa.mjs`, `node scripts/serve.mjs [raiz]`, `./docker/run.sh` e comandos Compose descritos em Deploy. Não há CLI publicada, eventos de domínio externos, webhooks ou API pública de biblioteca.
 
@@ -451,6 +455,7 @@ Perfis/permissões do Codex, instalação de Docker no host e permissões do soc
 | [tests/cases/saveCases.mjs](tests/cases/saveCases.mjs) | Escrita/leitura de checkpoint/configurações, reset, JSON inválido e storage recusado |
 | [tests/harness.mjs](tests/harness.mjs) | DOM/Image/Canvas/RAF e LocalStorage substitutos; importa main.js, exporta instâncias e tick/draw; não simula browser completo |
 | [tests/e2e.mjs](tests/e2e.mjs) | Chromium real: menu/assets, intro/skip, movimento/corrida, pulo/chão, mute/pause, reload/continuar, reset; E2E_FULL inclui cinco fases/final. Reinício aguarda intro/play; mute aguarda o rótulo após KeyM, sincronizando leituras com o loop de simulação |
+| [tests/pages.mjs](tests/pages.mjs) | Chromium desktop/móvel em /beethoven/ com raiz retornando 404; nove imagens HD, início/movimento, link inicial, corrida por toque/rotação e HTML offline. Requer dist e Chromium; gera pages-report.json |
 | [scripts/render-qa.mjs](scripts/render-qa.mjs) | QA visual manual em Canvas nativo; não é runner de testes, não mede FPS nem verifica browser |
 | [tests/visual-mobile.mjs](tests/visual-mobile.mjs) | 9 checks Chromium: qualidade 4K; fullscreen nativo desktop/saída externa; menus/toque/cancelamento/save; paisagem ocupa >95% do maior 16:9; orientação CDP/barras 390→320→390; fullscreen móvel com rotação; fallback recusado em fixture. Capturas incluem mobile-fullscreen.png; sem execução física/Safari |
 | [tests/story-render.test.mjs](tests/story-render.test.mjs) | 3 casos Node: Run sozinho/sentido/soltura, timeline de passeio/guia/fuga e fase periódica para câmera negativa/distante |
@@ -540,7 +545,10 @@ A .dockerignore exclui Git/configurações protegidas, node_modules, dist/result
 - `docker compose --profile test run --rm tests`: validação após construir a imagem apropriada.
 - `docker compose up -d --build --wait beethoven` pode ser executado sem passar pelo helper; **não** implica testes aprovados.
 - Código montado em dev não inclui alterações de configs/package.json em tempo real; mudanças dessas configurações requerem rebuild/cópia apropriada.
-- Não há ambiente staging separado, domínio público, hospedagem cloud, registry de publicação, Kubernetes, Helm, Terraform, pipeline CI/CD ou deploy automatizado remoto.
+- `.github/workflows/pages.yml` prepara publicação no GitHub Pages a cada push em main ou execução manual: Node 24, build, npm test, Chromium/test:pages, configure-pages v5, upload-pages-artifact v4 somente dist e deploy-pages v4. Checkout e setup-node usam v6; deploy tem pages:write/id-token:write e ambiente github-pages. Jobs têm timeout; publicações são serializadas.
+- É necessário habilitar Source=GitHub Actions em Settings → Pages. O remote origin local é https://github.com/elomir21/beethoven.git; URL padrão esperada https://elomir21.github.io/beethoven/. Não houve push, ativação de Pages nem execução remota comprovada nesta preparação. README contém o procedimento; GitHub Free exige repositório público para Pages.
+- Vite usa base relativa ./; Renderer usa ./assets/<caminho> relativo ao documento e Página inicial aponta para ./, preservando o prefixo do repositório. O build offline segue usando o manifesto embutido. O servidor Node local não monta subdiretórios de projeto; tests/pages.mjs fornece esse servidor apenas para QA.
+- Não há ambiente staging separado, domínio personalizado, registry de publicação, Kubernetes, Helm ou Terraform. Docker permanece o caminho de operação local; o Pages recebe arquivos estáticos e dispensa Node/Docker em produção.
 - Permissões do daemon e downloads são pré-requisitos externos; a existência dos arquivos Docker não prova que imagens/containers estejam construídos ou ativos.
 
 ## Débitos Técnicos e Observações
@@ -568,6 +576,14 @@ A .dockerignore exclui Git/configurações protegidas, node_modules, dist/result
 Os débitos de arquitetura/arte continuam documentados; a tarefa de disponibilização corrigiu a sincronização do teste de reinício e iniciou o serviço local. Nenhum valor de secret/credencial foi copiado para o documento.
 
 ## Última Atualização
+
+### Preparação para GitHub Pages concluída localmente — 2026-11-03, America/Sao_Paulo
+
+- **Configuração:** .github/workflows/pages.yml dispara em main/manual; Node 24, build, npm test e Chromium/test:pages antes de upload exclusivo de dist e deploy. Permissões de escrita Pages/OIDC limitadas ao job deploy; ambiente github-pages e concorrência serial. Instalação mantém padrão existente npm ci com lockfile, npm install sem ele.
+- **Contratos:** Vite usa base ./; Renderer resolve ./assets/<caminho> a partir do documento e preserva precedência do manifesto offline; link Página inicial usa ./, mantendo o diretório do repositório.
+- **Teste novo:** tests/pages.mjs serve dist apenas em /beethoven/, rejeitando caminhos na raiz. Cobre build Vite, nove PNGs, movimento, link inicial, toque/rotação e edição autocontida; relatório pages-report.json. Integra npm run verify. A consulta automática do Chromium a /favicon.ico é desconsiderada; todos os recursos do jogo devem carregar dentro do prefixo.
+- **Documentação:** README registra ativação de Source=GitHub Actions, push main/execução manual e URL esperada https://elomir21.github.io/beethoven/. Repositório origin confirmado localmente; não houve push nem configuração remota de Pages nesta tarefa.
+- **Validação:** typecheck/build Vite e offline, dois Vitest, 15 Node (travessia simulada integral), sete E2E curtos, nove checks visuais/móveis/fullscreen e três de sprites/parallax aprovados no mesmo build. Três checks novos Pages aprovados após ajustar a fixture para ignorar a consulta automática a favicon. YAML, gatilho main, upload exclusivo dist e permissões conferidos; git diff --check limpo. pages-report.json registra a URL temporária local em /beethoven/ e nenhum pageerror. Workflow remoto, Pages e domínio não verificados; não houve novo deploy local Docker nem push. Sem teste físico/Safari ou travessia integral em navegador nesta tarefa.
 
 ### Organização dos assets concluída — 2026-11-03, America/Sao_Paulo
 

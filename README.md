@@ -8,6 +8,20 @@ Os assets de execução ficam em `public/assets/backgrounds/<localidade>/` e `pu
 
 Agora também funciona com controles de toque no navegador do celular. A área do jogo mantém **16:9** em retrato ou paisagem; a resolução de desenho acompanha a tela e sua densidade de pixels, até **3840×2160**, preservando a física original. Beethoven tem atlas exclusivo; os outros cães são pitbulls, pastores-alemães, pinschers e rottweilers. Gatos neutros passeiam pelos cenários, observam Beethoven e reagem ao latido.
 
+## Publicar no GitHub Pages
+
+O jogo roda inteiramente no navegador. A publicação usa somente `dist/`, incluindo os nove PNGs de execução e a edição offline; Docker e Node não são necessários para jogar no site.
+
+1. No repositório do GitHub, abra **Settings → Pages → Build and deployment → Source** e selecione **GitHub Actions**.
+2. Envie estas alterações para a branch `main`. O workflow [pages.yml](.github/workflows/pages.yml) instala as ferramentas, gera o build, executa testes de lógica e de navegador no caminho `/beethoven/` e publica a distribuição. Também pode ser iniciado em **Actions → Publicar jogo no GitHub Pages → Run workflow** depois que o arquivo estiver no GitHub.
+3. Aguarde o job `deploy` concluir. Para `elomir21/beethoven`, o endereço padrão esperado é **https://elomir21.github.io/beethoven/**. A URL efetiva aparece no ambiente `github-pages` e em Settings → Pages.
+
+Vite e carregamento das imagens usam caminhos relativos, compatíveis com o subdiretório do repositório e a raiz de um domínio. `npm run test:pages` valida o build em um servidor temporário que rejeita URLs fora de `/beethoven/`, incluindo imagens, navegação inicial, toque/rotação e HTML autocontido. Execute `npm run build` antes dele; requer Chromium como os demais testes de browser. O workflow usa Node 24 e instala o Chromium pelo Playwright.
+
+No GitHub Free, Pages está disponível para repositórios públicos; repositórios privados exigem um plano compatível. A publicação depende de Pages/Actions habilitados e das regras do ambiente `github-pages`. Referências: [workflows do GitHub Pages](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages) e [base relativa do Vite](https://vite.dev/guide/build.html#relative-base).
+
+A configuração e os testes locais não significam que o site já foi publicado; o primeiro deploy precisa concluir no GitHub. O save é local ao navegador/origem e não é transferido do endereço local para o Pages.
+
 ## Jogar no celular pela mesma rede Wi-Fi
 
 No computador que hospeda o jogo:

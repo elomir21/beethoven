@@ -1,5 +1,13 @@
 # Relatório de testes
 
+## Preparação para GitHub Pages — 03/11/2026
+
+- Vite com base relativa `./`, imagens relativas ao documento e link inicial mantendo o diretório do projeto. Build web e edição offline gerados no Docker com typecheck aprovado.
+- Dois Vitest, 15 testes Node (incluindo travessia integral simulada), sete E2E curtos, nove checks visuais/móveis/fullscreen e três de família/parallax aprovados no mesmo build.
+- `tests/pages.mjs`: três checks Chromium aprovados em servidor que monta `dist` somente em `/beethoven/`, retornando 404 fora desse prefixo. Confirma nove PNGs HD, menu, início/movimento, link inicial, corrida por toque/rotação e edição offline; nenhum pageerror. A busca automática do Chromium por `/favicon.ico` é desconsiderada. Evidência: `test-results/pages-report.json`.
+- Workflow `.github/workflows/pages.yml`: YAML, gatilho main, artefato exclusivo `dist` e permissões conferidos localmente. A execução no GitHub, ativação de Pages e acesso público não foram realizados. Nenhum push ou novo deploy Docker local nesta tarefa; o serviço local existente continua independente do build preparado para Pages.
+- Sem teste físico/Safari, medição de desempenho ou repetição da travessia integral em navegador.
+
 ## Organização dos assets — 03/11/2026
 
 - 22 arquivos movidos com SHA-256 preservado. Runtime: nove PNGs em public/assets/backgrounds/<localidade> e characters/{beethoven,rivals,cats,family}. Fotos, originais, ZIP e legado em assets/, fora da distribuição e do contexto Docker.
