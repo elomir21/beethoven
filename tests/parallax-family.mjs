@@ -3,6 +3,7 @@ import {spawn} from 'node:child_process';
 import {mkdir,readFile,writeFile} from 'node:fs/promises';
 import assert from 'node:assert/strict';
 import {levels} from '../src/data/levels.js';
+import {characterFiles} from '../src/data/assets.js';
 
 const result={status:'running',checks:[],errors:[],screens:[]};
 let browser,server;
@@ -19,9 +20,9 @@ try{
  // No teleport or mutable debug API is added to the production game.
  await page.route('**/__story_qa',route=>route.fulfill({contentType:'text/html',body:html.replace(entry,"window.__storyQA=await require('src/main.js');")}));
  await page.goto(url+'/__story_qa');await page.waitForFunction(()=>window.__storyQA);
- await check('Quatro atlas carregados e duas alturas humanas equivalentes',async()=>{
+ await check('Todos os atlas carregados e duas alturas humanas equivalentes',async()=>{
   const data=await page.evaluate(()=>{const {render}=window.__storyQA;const frames=[];const scratch=document.createElement('canvas');scratch.width=120;scratch.height=100;const c=scratch.getContext('2d'),original=render.c;try{render.c=c;for(const actor of ['julia','elomir']){c.clearRect(0,0,120,100);render.sprite(actor,60,85,0);const p=c.getImageData(0,0,120,100).data;let top=100,bottom=0;for(let y=0;y<100;y++)for(let x=0;x<120;x++)if(p[(y*120+x)*4+3]>100){top=Math.min(top,y);bottom=Math.max(bottom,y)}frames.push(bottom-top)}}finally{render.c=original}return {errors:render.errors,loaded:Object.keys(render.images).filter(f=>f.includes('characters')).length,heights:frames}});
-  assert.deepEqual(data.errors,[]);assert.equal(data.loaded,4);assert(Math.abs(data.heights[0]-data.heights[1])<=2);
+  assert.deepEqual(data.errors,[]);assert.equal(data.loaded,characterFiles.length);assert(Math.abs(data.heights[0]-data.heights[1])<=2);
  });
  await check('Parallax: extremidades contínuas e nenhuma mudança brusca ao cruzar o período',async()=>{
   const stats=await page.evaluate(files=>{

@@ -1,5 +1,16 @@
 # Relatório de testes
 
+## Superfrango, perigos e chefes — 04/11/2026
+
+- **Build final aprovado:** typecheck, Vite web e HTML autocontido. Onze PNGs de execução (cinco fundos e seis atlas); recortes alpha dos dois atlas novos conferidos. Originais preservados.
+- **Lógica:** dois casos Vitest e 24 testes Node aprovados. Nove casos novos cobrem distribuição dos frangos/perigos/checkpoints, coleta/poder/voo/pausa/expiração, dano, ciclo e cooldown do chefe, latido/pisão/superpum, bloqueio de saída, retry e save compatível. Travessia das cinco fases por física/inputs, sem teletransporte: **337 s lógicos, 73 ossos e zero retries**, com todos os chefes vencidos.
+- **Browser:** sete E2E curtos aprovados diretamente no serviço final (`http://beethoven:5173`), incluindo menu, imagens, narrativa, movimento, pulo, áudio/mute/pausa, save/reload e nova partida. Durante a tarefa passaram também nove checks visuais/móveis/fullscreen e três de família/parallax; não houve alteração da geometria do estágio ou controles de orientação.
+- **Poder/combate:** três checks de `test:combat` aprovados no build final. Fixture interceptada do HTML offline escolhe posições usando exports existentes; não adiciona API mutável à produção. Coleta por salto real ativa camisa, impulso, voo e timer; pausa/expiração conferidas. Cinco chefes vencidos por teclas sem poder nem edição de HP: 8/8/10/10/13 s e zero retries na última execução. O piloto permite até três tentativas pelo botão real do checkpoint, registrando o resultado. Voo móvel validado por multitoque CDP. Barra do chefe desenhada abaixo da toolbar sobreposta, comparada geometricamente aos botões DOM.
+- **Pages:** três checks aprovados novamente no último build em `/beethoven/`, com raiz retornando 404: onze imagens, início/movimento/link inicial, toque/rotação e HTML offline. Workflow também executa combate antes da publicação. Nenhum push ou deploy remoto nesta tarefa.
+- **Produção local:** container final saudável em `0.0.0.0:5173`; Wi-Fi `192.168.2.181:5173` respondeu HTTP 200. Os **16 arquivos servidos** têm os mesmos SHA-256 do `dist` testado, incluindo os onze PNGs e as edições web/offline; referências/origem e src retornam 404. Evidência: `served-artifacts-report.json`.
+- **Evidências:** `combat-report.json`, `e2e-report.json`, `pages-report.json` e `served-artifacts-report.json` em `test-results/`. Capturas `vasco-flight.png`, `rat-boss.png`, `mobile-superpum.png` e `mobile-boss-hud.png` inspecionadas: uniforme legível, voo/gás, rato e barra do chefe visível junto aos controles.
+- **Limites:** Chromium com emulação móvel; sem aparelho físico/Safari, benchmark de desempenho ou audição. Travessia integral de vários minutos em navegador não repetida; o percurso integral foi simulado e os cinco combates foram executados no browser.
+
 ## Preparação para GitHub Pages — 03/11/2026
 
 - Vite com base relativa `./`, imagens relativas ao documento e link inicial mantendo o diretório do projeto. Build web e edição offline gerados no Docker com typecheck aprovado.

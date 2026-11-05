@@ -4,17 +4,24 @@ test('travessia das cinco fases por física e inputs, sem teleporte',()=>{save.r
  for(let index=0;index<5;index++){
   if(index>0){assert.equal(g.mode,'transition');tick([],['Enter'])}let frames=0,jumpHold=0,lastJump=-1000,stalls=0,lastX=0;
   while(g.mode==='play'&&frames<60000){const p=g.player,l=g.level;
-   const danger=[...l.dogs.filter(d=>d.calm<=0),...l.hazards].some(d=>d.x>p.x-20&&d.x<p.x+85&&Math.abs(d.y-p.y)<65);
+   const danger=[...l.dogs.filter(d=>d.calm<=0),...l.hazards].some(d=>d.x>p.x-20&&d.x<p.x+60&&Math.abs(d.y-p.y)<65);
    const gap=l.ground.some((s,n)=>n<l.ground.length-1&&s.x+s.w>p.x&&s.x+s.w<p.x+68);
    // O bot late antes de cães, segura o salto e usa as mesmas teclas do jogador.
    let pressed=[];if(p.grounded&&(danger||gap)&&frames-lastJump>45){pressed.push('Space');jumpHold=55;lastJump=frames}
    if(frames%110===0)pressed.push('KeyE');
-   const held=['KeyD','ShiftLeft'];if(jumpHold-->0)held.push('Space');tick(held,pressed);frames++;
+   let held=['KeyD','ShiftLeft'];
+   if(l.boss.active&&!l.boss.defeated){
+    const b=l.boss,delta=b.x+b.w/2-p.x-p.w/2;
+    held=Math.abs(delta)>65||p.face!==Math.sign(delta)?[delta>0?'KeyD':'KeyA']:[];
+    if(p.grounded&&b.state==='windup'&&b.timer<.28&&frames-lastJump>45){pressed.push('Space');jumpHold=65;lastJump=frames}
+    if(frames%60===0)pressed.push('KeyE');
+   }
+   if(jumpHold-->0)held.push('Space');tick(held,pressed);frames++;
    if(g.mode==='over'){retries++;assert(retries<25,'excesso de recuperações');g.retry()}
-   if(Math.abs(p.x-lastX)<.01)stalls++;else stalls=0;lastX=p.x;if(stalls>200)throw Error('personagem preso');
+   if(Math.abs(p.x-lastX)<.01&&!l.boss.active)stalls++;else stalls=0;lastX=p.x;if(stalls>200)throw Error('personagem preso');
    if(index===4&&p.x>l.end-40){tick([],['KeyE']);break}
   }
-  assert(frames<60000,`fase ${index+1} não concluída`);assert.equal(g.mode,index===4?'ending':'transition');results.push({level:index+1,seconds:Math.round(frames/120),checkpoint:g.checkpoint});totalFrames+=frames;
+  assert(frames<60000,`fase ${index+1} não concluída: ${JSON.stringify({x:g.player.x,hp:g.player.hp,face:g.player.face,boss:g.level.boss})}`);assert.equal(g.mode,index===4?'ending':'transition');results.push({level:index+1,seconds:Math.round(frames/120),checkpoint:g.checkpoint});totalFrames+=frames;
  }
  assert.equal(g.mode,'ending');for(let i=0;i<4;i++)tick([],['Enter']);assert.equal(g.mode,'finish');assert.equal(save.data.completed,true);assert(g.collected.size>0);draw();console.log(JSON.stringify({simulation:results,bones:g.collected.size,retries,seconds:Math.round(totalFrames/120)}));
 });

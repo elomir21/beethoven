@@ -40,11 +40,17 @@ try{
         if(p.mode==='ending'){await releaseKeys();await page.screenshot({path:'test-results/ending.png'});await page.keyboard.press('Escape');continue}
         assert.equal(p.mode,'play');
         if(lastLevel!==p.level){lastLevel=p.level;model=makeLevel(p.level);holdUntil=0;console.log(`Percorrendo fase ${p.level+1}/5`)}
-        const now=Date.now();const danger=[...model.dogs,...model.hazards].some(d=>d.x>p.x-40&&d.x<p.x+105&&Math.abs(d.y-p.y)<65);const gap=model.ground.some((s,n)=>n<model.ground.length-1&&s.x+s.w>p.x&&s.x+s.w<p.x+68);
-        await page.keyboard.down('KeyD');await page.keyboard.down('Shift');
-        if(p.grounded&&(danger||gap)&&now-lastJump>380){await page.keyboard.up('Space');await page.keyboard.down('Space');holdUntil=now+460;lastJump=now}
+        const now=Date.now();const danger=[...model.dogs,...model.hazards].some(d=>d.x>p.x-40&&d.x<p.x+60&&Math.abs(d.y-p.y)<65);const gap=model.ground.some((s,n)=>n<model.ground.length-1&&s.x+s.w>p.x&&s.x+s.w<p.x+68);
+        const fighting=p.boss.active&&!p.boss.defeated,delta=p.boss.x+p.boss.w/2-p.x-13.5;
+        if(fighting){
+          await page.keyboard.up('Shift');
+          const axis=Math.abs(delta)>65||p.face!==Math.sign(delta)?Math.sign(delta):0;
+          for(const [key,dir]of [['KeyD',1],['KeyA',-1]])await page.keyboard[axis===dir?'down':'up'](key);
+        }else{await page.keyboard.up('KeyA');await page.keyboard.down('KeyD');await page.keyboard.down('Shift')}
+        const jump=fighting?p.boss.state==='windup'&&p.boss.timer<.28:danger||gap;
+        if(p.grounded&&jump&&now-lastJump>380){await page.keyboard.up('Space');await page.keyboard.down('Space');holdUntil=now+540;lastJump=now}
         else if(now>holdUntil)await page.keyboard.up('Space');
-        if(now-lastBark>650||p.level===4&&p.x>model.end-50){await page.keyboard.press('KeyE');lastBark=now}
+        if(now-lastBark>500||p.level===4&&p.x>model.end-50){await page.keyboard.press('KeyE');lastBark=now}
         await page.waitForTimeout(35);
       }
       await releaseKeys();assert.equal((await snapshot()).mode,'finish');assert((await snapshot()).bones>0);

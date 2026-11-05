@@ -1,14 +1,16 @@
 # Arte e qualidade de imagem
 
-Atualização HD de 03/11/2026. A ferramenta integrada image_gen criou os atlas e remasterizou os cenários a partir das referências locais. Os originais foram preservados. Prompts finais: [ART_PROMPTS.md](ART_PROMPTS.md) e [BACKGROUND_PROMPTS.md](BACKGROUND_PROMPTS.md).
+Atualização HD de 04/11/2026. A ferramenta integrada image_gen criou os atlas e remasterizou os cenários a partir das referências locais. Os originais foram preservados. Prompts finais: [ART_PROMPTS.md](ART_PROMPTS.md) e [BACKGROUND_PROMPTS.md](BACKGROUND_PROMPTS.md).
 
-Organização: `public/assets/` contém somente os nove PNGs carregados no runtime. Cada cenário tem diretório por localidade; os atlas ficam em characters/beethoven, rivals, cats e family. Fotos, arquivos de origem, ZIP e legado ficam em `assets/`, fora de public/dist e do contexto Docker. Estrutura completa: [assets/README.md](../assets/README.md). A reorganização preservou os bytes dos 22 assets, conferidos por SHA-256.
+Organização: `public/assets/` contém somente os onze PNGs carregados no runtime. Cada cenário tem diretório por localidade; os atlas ficam em characters/beethoven, rivals, cats, family e bosses. Fotos, arquivos de origem, ZIP e legado ficam em `assets/`, fora de public/dist e do contexto Docker. Estrutura completa: [assets/README.md](../assets/README.md). A reorganização preservou os bytes dos 22 assets, conferidos por SHA-256.
 
 ## Arquivos usados no jogo
 
 | Arquivo em public/assets/ | Dimensão real | Conteúdo |
 |---|---|---|
 | characters/beethoven/beethoven-hd.png | 1672×941 RGBA | 12 poses, grade 4×3; único personagem branco/caramelo com orelhas assimétricas |
+| characters/beethoven/beethoven-vasco-hd.png | 1671×941 RGBA | 12 poses, grade 4×3; mesmo Beethoven vestindo preto, faixa branca diagonal e cruz vermelha |
+| characters/bosses/rat-hd.png | 1254×1254 RGBA | 4 poses, grade 2×2; rato gigante em repouso, corrida, ataque e atordoado |
 | characters/rivals/rivals-hd.png | 1448×1086 RGBA | 16 poses, grade 4×4; pitbull, pastor-alemão, pinscher e rottweiler |
 | characters/cats/cats-hd.png | 1774×887 RGBA | 8 poses, grade 4×2; tabby cinza e tuxedo preto/branco |
 | characters/family/family-hd.png | 1774×887 RGBA | 12 poses, grade 6×2; Júlia e Elomir, seis poses por pessoa |
@@ -18,9 +20,11 @@ Organização: `public/assets/` contém somente os nove PNGs carregados no runti
 | backgrounds/caminho-novo/06_caminho_novo_palhoca-hd.png | 2172×724 RGB | Comércio, casas, jardins e placa Caminho Novo |
 | backgrounds/terra-nova/05_terra_nova_palhoca-hd.png | 2172×724 RGB | Casas, portões, jardins e carro azul |
 
-Os rivais usam desenhos próprios em todas as fases e na introdução; não há recoloração do sprite de Beethoven. As quatro poses de cada rival são repouso, duas passadas e latido. Os gatos têm repouso, duas passadas e pose sentada; são neutros e reagem à proximidade/latido sem causar dano.
+Os rivais usam desenhos próprios em todas as fases e na introdução; não há recoloração do sprite de Beethoven. As quatro poses de cada rival são repouso, duas passadas e latido. Os gatos têm repouso, duas passadas e pose sentada; como NPCs comuns, são neutros e reagem à proximidade/latido sem causar dano. Mingau e Sombra são chefes separados, com hitbox e combate; usam os atlas felinos ampliados, assim como Brutus/Titã usam os atlas rivais. Ratão tem atlas próprio.
 
 Júlia é branca e tem cabelo castanho escuro; Elomir tem cabelo preto. Os dois têm altura lógica de 68 e poses de repouso, quatro passos e inclinação para a guia. Os sprites aparecem na abertura, no reencontro e no final. A timeline familyScene.js anima passeio conjunto, guia na mão de Elomir, fuga de Beethoven e busca. Prompt e procedência: [FAMILY_PROMPT.md](FAMILY_PROMPT.md).
+
+Os dois atlas de superpoder/chefe foram gerados pela ferramenta integrada, com alpha real, e copiados sem reprocessar pixels. O Beethoven original continua separado. Prompts completos e dimensões pedidas/efetivas: [POWER_BOSS_ART.md](POWER_BOSS_ART.md). Coxas de frango, folhas, vidro, espinhos, pontas e nuvens de gás são desenhos Canvas nativos, escalados junto à cena.
 
 ## Integração e nitidez
 
@@ -28,7 +32,7 @@ Júlia é branca e tem cabelo castanho escuro; Elomir tem cabelo preto. Os dois 
 
 O jogo mantém coordenadas de física 480×270 e um estágio **16:9** em retrato ou paisagem. O backing store do Canvas acompanha o tamanho CSS e o devicePixelRatio até **3840×2160**, com suavização de imagens de alta qualidade. Essa é a resolução máxima de desenho, não a resolução de todos os arquivos. Texturas HD são desenhadas diretamente; não são primeiro reduzidas para 480×270 nem para células de 64×48.
 
-Os cenários têm altura lógica fixa de 272 para preservar o enquadramento; resolução de origem não altera câmera/colisões. parallax.js prepara uma faixa em Canvas na resolução nativa, misturando 6% das extremidades, e a repete como padrão contínuo. PNGs originais e letreiros são preservados, sem espelhamento. A faixa é armazenada em cache por cenário; há reutilização de conteúdo e uma transição curta, não geração ilimitada de paisagens inéditas. O HTML autocontido incorpora os cinco cenários usados e quatro atlas (nove imagens). Build web copia somente os PNGs de execução de public/assets, mantendo os diretórios; materiais de assets/ não entram na distribuição.
+Os cenários têm altura lógica fixa de 272 para preservar o enquadramento; resolução de origem não altera câmera/colisões. parallax.js prepara uma faixa em Canvas na resolução nativa, misturando 6% das extremidades, e a repete como padrão contínuo. PNGs originais e letreiros são preservados, sem espelhamento. A faixa é armazenada em cache por cenário; há reutilização de conteúdo e uma transição curta, não geração ilimitada de paisagens inéditas. O HTML autocontido incorpora os cinco cenários usados e seis atlas (onze imagens). Build web copia somente os PNGs de execução de public/assets, mantendo os diretórios; materiais de assets/ não entram na distribuição.
 
 ## Referências e limites
 

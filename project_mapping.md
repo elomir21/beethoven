@@ -69,7 +69,7 @@ play ↔ pause → menu / retry
 play → over → retry / menu
 ```
 
-`start(index, resume)` recria os dados do nível e a entidade; `retry()` recria apenas o jogador no checkpoint e restaura seus três corações. Temporizadores de NPCs, fase global e itens já coletados não são zerados por `retry()`.
+`start(index, resume)` recria os dados do nível e a entidade; `retry()` recria apenas o jogador no checkpoint e restaura seus três corações. Temporizadores de NPCs, fase global e ossos já coletados não são zerados por `retry()`. O chefe invicto reinicia com vida cheia, os frangos reaparecem e o poder é removido; chefes vencidos continuam vencidos.
 
 ## Stack Tecnológica
 
@@ -118,7 +118,8 @@ Não há ORM, framework de UI, banco, cache remoto, SDK cloud ou dependência de
 │   ├── data/story.js               Introdução e encerramento
 │   ├── data/familyScene.js         Timeline pura do passeio/guia/fuga
 │   ├── engine/physics.js           clamp, overlap, move
-│   ├── entities/Beethoven.js       Jogador, física e sequências de frames
+│   ├── entities/Beethoven.js       Jogador, física, superfrango e voo
+│   ├── entities/Boss.js            Cinco chefes, arena e ciclo de ataques
 │   ├── render/Renderer.js          Mundo, clima, sprites, HUD e narrativa
 │   ├── render/parallax.js          Faixa de cenário contínua e fase cíclica
 │   └── systems/
@@ -132,14 +133,14 @@ Não há ORM, framework de UI, banco, cache remoto, SDK cloud ou dependência de
 │   ├── source/characters/beethoven/ Sprite original fornecido
 │   ├── archives/                  ZIP original dos cenários
 │   └── legacy/characters/beethoven/ Sheet antiga processada
-├── public/assets/                 Apenas nove PNGs de execução
+├── public/assets/                 Onze PNGs de execução
 │   ├── backgrounds/               Um diretório por localidade
 │   │   ├── beira-mar-florianopolis/
 │   │   ├── parque-costa-azul/
 │   │   ├── passeio-pedra-branca/
 │   │   ├── caminho-novo/
 │   │   └── terra-nova/
-│   └── characters/                Atlas em beethoven/, rivals/, cats/ e family/
+│   └── characters/                Atlas em beethoven/, rivals/, cats/, family/ e bosses/
 ├── scripts/
 │   ├── serve.mjs                   Servidor HTTP estático
 │   ├── build.mjs                   Build alternativo e HTML autocontido
@@ -159,7 +160,9 @@ Não há ORM, framework de UI, banco, cache remoto, SDK cloud ou dependência de
 │   ├── story-render.test.mjs       Corrida direta, timeline e fase infinita
 │   ├── parallax-family.mjs         Pixels de emenda e abertura em Chromium
 │   ├── visual-mobile.mjs           Qualidade 4K, layout e multitoque em browser
-│   └── pages.mjs                   Build em /beethoven/, assets, toque/rotação e HTML offline
+│   ├── pages.mjs                   Build em /beethoven/, assets, toque/rotação e HTML offline
+│   ├── power-boss.test.mjs          Poder, dano, arenas, combate, retry e save
+│   └── combat-browser.mjs          Voo/pausa/expiração, cinco lutas e multitoque
 ├── docker/mobile.env              Preset opcional para acesso pela rede local
 ├── docker/run.sh                   Preflight → teste → produção saudável
 ├── docs/
@@ -169,6 +172,7 @@ Não há ORM, framework de UI, banco, cache remoto, SDK cloud ou dependência de
 │   ├── ASSETS.md                   Auditoria de arte e pendências
 │   ├── ART_PROMPTS.md              Prompts e procedência da geração de arte
 │   ├── FAMILY_PROMPT.md            Prompt do atlas de Júlia e Elomir
+│   ├── POWER_BOSS_ART.md           Prompts/dimensões dos atlas Vasco e rato
 │   ├── BACKGROUND_PROMPTS.md       Prompts dos cinco cenários remasterizados
 │   ├── TEST_REPORT.md              Evidências históricas de testes
 │   └── screenshots/               Renders level-1…5.png e ending.png
@@ -176,7 +180,7 @@ Não há ORM, framework de UI, banco, cache remoto, SDK cloud ou dependência de
 └── test-results/                  Artefatos E2E locais; ignorado pelo Git
 ```
 
-Fotos, sprite original, seis fundos originais, ZIP e sheet legada ficam em assets/, conforme [assets/README.md](assets/README.md). Não são código/arte carregada pelo jogo. Public/assets contém somente nove PNGs HD usados; não há script persistido de extração do ZIP.
+Fotos, sprite original, seis fundos originais, ZIP e sheet legada ficam em assets/, conforme [assets/README.md](assets/README.md). Não são código/arte carregada pelo jogo. Public/assets contém somente onze PNGs HD usados; não há script persistido de extração do ZIP.
 
 As pastas protegidas `.git/`, `.agents/`, `.codex/` e `.aws/` não são módulos do jogo e não devem ser usadas como fonte de configuração de negócio. Nenhum valor de credencial dessas áreas faz parte deste mapa.
 
@@ -200,6 +204,7 @@ Criticidade: **alta** impede iniciar, controlar, salvar ou concluir a aventura; 
 | Catálogo de arte | src/data/assets.js, src/data/spriteFrames.js | Contratos de arquivo/grade/tamanho lógico, raças/pelagens e recortes gerados a partir dos PNGs; compartilhados entre Renderer, build, testes e QA | Alta |
 | Família e parallax | src/data/familyScene.js, src/render/parallax.js | Timeline determinística por cena/tempo; faixa cíclica com blend nativo de 6% e fase fracionária. Renderer desenha humanos/animais pelo mesmo método sprite | Média |
 | Shell visual | src/style.css, Game.panel/syncUI, index.html | Estágio 16:9; paisagem de toque/fullscreen usa maior retângulo possível com controles/toolbar sobrepostos; retrato normal usa controles abaixo; menus roláveis e safe areas | Média |
+| Chefes | src/entities/Boss.js, Game.hitBoss/update | Cinco perfis com aviso/investida/recuperação, hit cooldown e arena; Game coordena pisão, latido, superpum, dano e bloqueio de saída | Alta |
 | Build/distribuição | `scripts/build.mjs`, Vite, `.github/workflows/pages.yml` | Dois caminhos de build produzem `dist`; Vite com base relativa; workflow valida e publica dist no Pages; geração offline usa sintaxe ES modules restrita | Alta para entrega |
 | Servidor | `scripts/serve.mjs` | HTTP nativo Node sem middleware/backend; serve raiz informada e aplica MIME/404 | Alta para HTTP; dispensável no HTML offline |
 | Assets/QA | `scripts/prepare_assets.py`, `scripts/render-qa.mjs` | Pillow normaliza frames; QA troca o contexto Canvas usando harness e grava PNGs | Média |
@@ -230,26 +235,28 @@ Criticidade: **alta** impede iniciar, controlar, salvar ou concluir a aventura; 
 | NPCs/dano | Proximidade ou overlap durante play | NPC patrulha/alerta/late/retorna → colisão não acalmada ou hazard chama hurt → reduz HP, aplica impulso/invulnerabilidade | `over` ao zerar; retry por ação do usuário | Alta |
 | Gatos neutros | Factory + passos de play | Passeiam em trecho seguro → observam jogador próximo → afastam-se ao latido, dentro do intervalo de origem | Não causam dano, não são coletáveis e não alteram save | Média |
 | Queda | `player.y > 290` | `hurt(true)` → perde vida mesmo se invulnerável → recoloca no checkpoint se ainda vivo | Recuperação local; game over se HP zerar | Alta |
-| Latido/portão | E, se bark não ativo | Bark 0,4 s + sfx → NPCs a menos de 120 px acalmam por 3,5 s → se nível 4 e além de `end-55`, inicia ending | Sem combate; final depende dessa ação | Alta |
+| Latido/portão | E, se bark não ativo | Bark 0,4 s → NPCs próximos acalmam; ataque frontal atinge chefe a menos de 110 px fora da investida → no último portão inicia ending se chefe vencido | Latido serve ao combate e à interação final | Alta |
 | Coleta | Proximidade entre corpo e osso | ID não coletado → adiciona ao Set → salva lista → efeito sonoro → seis partículas | Ossos persistem entre tentativas e fases | Média; itens opcionais |
 | Checkpoint | Jogador no chão a menos de 27 px da bandeira e posição maior que checkpoint | Atualiza checkpoint em memória/storage → HP=3 → sfx + hint | Não regride checkpoint na mesma fase | Alta |
-| Troca de fase | `player.x > end-40`, índices 0…3 | `transition()` salva próximo índice e checkpoint=0 → painel → Enter/botão chama `start` | Progressão linear; ossos independentes da saída | Alta |
+| Troca de fase | `player.x > end-40`, índices 0…3, chefe vencido | `transition()` salva próximo índice e checkpoint=0 → painel → Enter/botão chama `start` | Progressão linear; ossos independentes da saída | Alta |
 | Encerramento | Interação no Terra Nova | `story('ending')` → cenas → `finish()` → completed=true + write → painel replay/menu | Final com save; Esc também conclui a narrativa | Alta |
 | Pausa/foco | Esc em play, blur da janela ou documento oculto | `pause()` apenas quando play → update não simula gameplay → resume/retry/menu | Posição e tempo global congelados em pause; desenho continua | Alta |
 | Rotação/área visível | Resize/orientação/visualViewport | Display publica largura/altura/offsets → shell ocupa viewport em paisagem → Renderer adapta backing store após layout; input limpo ao girar | Sem reiniciar jogador, fase ou save | Alta |
 | Tela cheia | Botão Tela cheia/Sair | API padrão/WebKit sobre game-shell → acompanha fullscreenchange; API ausente/recusada ativa modo ampliado com aviso → Sair/Esc retorna | Inclui canvas, narrativa e controles; barras só são ocultadas pelo browser no fullscreen nativo | Média |
 | Áudio/mute | Clique em botão, Enter no menu ou toggle M/DOM | Desbloqueia AudioContext → sequências/efeitos só se contexto e não muted → mute salvo | Áudio falha sem impedir gameplay | Média |
 | Build Vite | `npm run build` | tsc → vite build → build.mjs --offline-only | Build web + Beethoven.html; sem execução de testes automática nesse comando | Alta |
-| Publicação Pages | Push em main ou workflow_dispatch | Node 24 → instalação → build → npm test → Chromium/test:pages → configurar Pages → upload dist → deploy protegido pelo ambiente github-pages | Depende de habilitar GitHub Actions como Source em Settings/Pages; configuração local não comprova deploy remoto | Alta |
+| Publicação Pages | Push em main ou workflow_dispatch | Node 24 → instalação → build → npm test → Chromium/test:pages/test:combat → configurar Pages → upload dist → deploy protegido pelo ambiente github-pages | Depende de habilitar GitHub Actions como Source em Settings/Pages; configuração local não comprova deploy remoto | Alta |
 | Passeio da família | Intro, cenas 0…3 | introFamily(part,time) → prender guia → caminhada conjunta → rival → queda da guia → fuga/busca; sprites da família também no reencontro/final | Timeline apenas visual, sem alterar física, save ou duração das cenas | Média |
 | Build alternativo | `npm run build:legacy` ou Node direto | Parse JS por VM → apaga/recria dist → copia arquivos → troca entrada TS por JS → empacota HTML | Não executa TS/Vite nem browser | Alta |
 | QA visual | `render-qa.mjs` | Importa harness → troca contexto por canvas nativo → carrega PNGs → posiciona jogador → renderiza cinco níveis/final | Execução manual; não é screenshot de browser | Média |
 | Instalação/validação Docker | `docker/run.sh` | preflight docker version → build tests → run verify → up production --wait | Falha em qualquer etapa interrompe o script | Alta |
+| Superfrango/voo | Contato com coxa escondida | Revela na proximidade → come → power=20/impulso inicial/camisa Vasco; segurar salto ativa propulsão e gás a cada 0,45 s; soltar desce | Pausa congela; expiração/retry removem poder; sem imunidade | Alta |
+| Arena/combate | X atinge Boss.trigger, mesmo voando | Ativa arena com chão contínuo → aproxima/avisa/investe/recupera → latido frontal fora da investida, pisão com quique ou superpum tiram HP → vitória salva índice e libera saída | Chefe invicto bloqueia transição e último portão; retry reinicia luta | Alta |
 
 ### Regras físicas e de execução
 
 - Corpo do jogador: `w=27`, `h=23`. A propriedade `y` é o **topo** da hitbox. O argumento `y` do construtor representa a altura dos pés e é convertido por `y-23`; o chão padrão fica em 222.
-- Velocidades horizontais máximas: 95 andando e 145 correndo; gravidade 850; impulso de pulo -335; velocidade vertical limitada em 480. Coyote e buffer: 0,1 s. Soltar pulo cedo reduz a subida.
+- Velocidades horizontais máximas: 95 andando, 145 correndo e 180 correndo com poder; voo limita o topo do corpo a y=35, usa propulsão/gravidade próprias enquanto o salto está segurado; gravidade 850; impulso de pulo -335; velocidade vertical limitada em 480. Coyote e buffer: 0,1 s. Soltar pulo cedo reduz a subida.
 - Plataformas `oneWay` não bloqueiam o eixo horizontal e só recebem aterrissagem de cima; `dx` transporta o corpo em plataforma móvel. Cenários não são colisores.
 - Piso escorregadio é selecionado por intervalo em X, sem checagem da altura do jogador. Não há rampas físicas nem colisão jogador/NPC como sólido; NPC é fonte de dano.
 - NPCs são objetos de dados com estados `patrol`, `alert`, `bark`, `return`; a lógica fica em Game. Invulnerabilidade após dano dura 1,8 s.
@@ -277,7 +284,7 @@ Vite possui seus servidores de desenvolvimento/preview configurados em `vite.con
 
 ### API de diagnóstico do navegador
 
-`window.beethoven.snapshot()` em [src/main.js](src/main.js) devolve mode, level, posição/velocidade, HP, chão, animação, bark, ossos, checkpoint, falhas de assets, resolução física do canvas, resumo dos **três primeiros** cães (inclui breed) e gatos (coat/estado/posição). É somente leitura, usado pelo E2E; não oferece teletransporte e não é API remota.
+`window.beethoven.snapshot()` em [src/main.js](src/main.js) devolve mode, level, posição/velocidade, HP, chão, animação, bark, ossos, checkpoint, falhas de assets, resolução física do canvas, resumo dos **três primeiros** cães (inclui breed) e gatos (coat/estado/posição). Inclui power/flying, frangos, face e estado/vida/tempo/posição do chefe. É somente leitura, usado pelo E2E; não oferece teletransporte e não é API remota.
 
 `window.BEETHOVEN_ASSETS` é um manifesto opcional de imagens data URI gerado pelo build offline e consultado por Renderer. Os exports de instâncias de `main.js` são interfaces internas de harness/QA, não contratos de biblioteca versionados.
 
@@ -295,12 +302,13 @@ Vite possui seus servidores de desenvolvimento/preview configurados em `vite.con
 | `npm run typecheck` | tsc --noEmit, escopo limitado ao bootstrap TS |
 | `npm test` | test:unit → test:logic; precisa de dist para production.test |
 | `npm run test:unit` | Vitest; dois casos compartilhados |
-| `npm run test:logic` | 15 casos Node com isolamento de arquivos desativado e VM experimental |
+| `npm run test:logic` | 24 casos Node com isolamento de arquivos desativado e VM experimental |
 | `npm run test:e2e` | Script Playwright independente |
 | `npm run test:visual` | Chromium desktop/4K, layout de celular, multitoque, cancelamento, save/pausa e orientação; relatório visual-mobile-report.json |
 | `npm run test:story` | Chromium: atlas humanos, alturas equivalentes, pixels de emenda/limite nos cinco cenários e capturas de cenas da abertura; story-assets-report.json |
 | `npm run test:pages` | Chromium em servidor temporário exclusivo /beethoven/: nove imagens, movimento, link inicial, corrida por toque, rotação e HTML offline; pages-report.json |
-| `npm run verify` | build → test → test:e2e → test:visual → test:story → test:pages |
+| `npm run test:combat` | Fixture Chromium com exports somente para QA: descoberta por salto, camisa/voo/pausa/expiração, cinco lutas sem poder e multitoque; combat-report.json |
+| `npm run verify` | build → test → test:e2e → test:visual → test:story → test:combat → test:pages |
 
 Outras interfaces: `python3 scripts/prepare_assets.py`, `node scripts/render-qa.mjs`, `node scripts/serve.mjs [raiz]`, `./docker/run.sh` e comandos Compose descritos em Deploy. Não há CLI publicada, eventos de domínio externos, webhooks ou API pública de biblioteca.
 
@@ -312,7 +320,7 @@ Outras interfaces: `python3 scripts/prepare_assets.py`, `node scripts/render-qa.
 | `makeLevel(index)` em `levels.js` | Obter arrays mutáveis novos por partida; não reutilizar a instância global `levels` como estado de gameplay |
 | `fresh()`, `validate()` e `Save` | Único schema e política de persistência; não criar outra chave/schema sem coordenar versão |
 | `Input.has/hit` | Diferenciar tecla segurada de acionamento único; consumir pressed com `end()` |
-| `AudioSystem.sfx/tone` | Efeitos e notas sem assets externos; efeitos reconhecidos: jump, bone, bark, hurt, checkpoint, land, step, interact |
+| `AudioSystem.sfx/tone` | Efeitos e notas sem assets externos; efeitos reconhecidos: jump, bone, bark, hurt, checkpoint, land, step, interact, chicken, fart, bossHit, victory |
 | `Renderer.sprite/animal/dog/human` | Recortes e escala compartilhados por animais e donos; humanos seguem descrição, sem referência fotográfica |
 | `Renderer.rect/text/bone/gate` | Primitivas compartilhadas por fases e cutscenes |
 | `Game.panel/hint` | Painéis DOM e mensagens temporárias; labels dos botões também utilizados nos testes |
@@ -329,29 +337,32 @@ LocalStorage, chave **`beethoven.save.v1`** em [src/systems/Save.js](src/systems
 |---|---|---|
 | `version` | number / 1 | Qualquer versão diferente de 1 descarta o save e retorna fresh |
 | `level` | inteiro / 0 | Somente 0…4; inválido descarta documento inteiro |
-| `checkpoint` | number / 0 | Finito, limitado a 0…20000; em `Game.start` precisa existir entre checkpoints da fase |
+| `checkpoint` | number / 0 | Finito, limitado a 0…20000; Game.start retoma na bandeira anterior mais próxima, ou zero, para aceitar mapas anteriores |
 | `bones` | string[] / [] | IDs `índice-ordinal`, regex numérica; deduplica e limita a 2000; total mostrado vem do tamanho do Set |
+| `bosses` | number[] / [] | Inteiros únicos 0…4 de chefes vencidos; campo ausente em saves v1 antigos recebe []; reset limpa |
 | `completed` | boolean / false | Coerção por igualdade a true; controla término e remoção de Continuar |
 | `started` | boolean / false | Habilita Continuar quando não completed |
 | `muted` | boolean / false | Persistido; único valor preservado em reset |
 | `unlocked` | number[] / [0] | Filtra inteiros de 0…4; não há seletor de fases nem deduplicação na função validate |
 
-`Save` captura falhas de JSON/leitura e volta ao estado inicial; falha de escrita é ignorada, mantendo a sessão jogável em memória. Escreve ao iniciar fase, coletar cada osso, ativar checkpoint, trocar fase, concluir e mudar mute/reset. Não salva HP, posição exata, tempo global, fases dos obstáculos ou estado dos NPCs. `unlocked` registra entradas/avanços, não um histórico detalhado de conclusão por fase.
+`Save` captura falhas de JSON/leitura e volta ao estado inicial; falha de escrita é ignorada, mantendo a sessão jogável em memória. Escreve ao iniciar fase, coletar cada osso, ativar checkpoint, vencer chefe, trocar fase, concluir e mudar mute/reset. Não salva HP, poder/frangos, posição exata, tempo global ou estado dos NPCs/chefe invicto. `unlocked` registra entradas/avanços, não um histórico detalhado de conclusão por fase.
 
 ### Nível e entidades em memória
 
 | Estrutura | Campos principais / relacionamento |
 |---|---|
-| Level | `{index,name,subtitle,bg,width,weather,story,platforms,hazards,dogs,cats,bones,checkpoints,slippery,ground,gaps,start,end}` retornado por `makeLevel` |
+| Level | `{index,name,subtitle,bg,width,weather,story,platforms,hazards,dogs,cats,bones,chickens,boss,checkpoints,slippery,ground,gaps,start,end}` retornado por `makeLevel` |
 | Corpo/plataforma | `x,y,w,h`, opcionais `oneWay`, `moving`, `origin`, `phase`, `dx`; move usa coordenadas do topo esquerdo |
-| Jogador | posição/velocidade, w/h, face, grounded, hp, inv, coyote, buffer, bark, land, state, time, step |
+| Jogador | posição/velocidade, w/h, face, grounded, hp, inv, coyote, buffer, bark, land, state, time, step; power (20 s), launch, flying, burst e boostCooldown |
 | NPC | corpo, breed (pitbull/shepherd/pinscher/rottweiler), origin, range, vx, state, calm; atualizados em Game.update, colisão original preservada |
 | Gato | coat (tabby/tuxedo), x, y nos pés, origin, range, vx, state (stroll/watch/startled), flee; sem hitbox/dano/save |
-| Hazard | corpo, type (`bike`, `swing`, `puddle`), origin e phase |
+| Hazard | corpo, type (`glass`, `thorns`, `spikes`), estático; colisão AABB tira um coração respeitando invulnerabilidade |
+| Frango | id, x/y/w/h, eaten/revealed; dois por fase, escondidos entre folhas em plataformas; comer ativa power, retry repõe |
+| Chefe | Boss(index,end): name/kind, hp/maxHp, x/y/w/h/vy, face, left/right/trigger, active/defeated/state/timer/inv; HP 5/6/7/7/9 |
 | Osso | `{id,x,y}`; id liga dados da fase ao Set `Game.collected` e save.bones |
 | Checkpoint / gap / slippery | Respectivamente `{x,y}`, `{x,w}`, `{x,w}`; fase identifica a qual mapa pertencem |
 | Cena narrativa | `{place,title,text,duration}`; `place` é índice da fase usada como cenário |
-| Partícula | `{x,y,vx,vy,life,color}`; criada em coleta e descartada ao expirar |
+| Partícula | `{x,y,vx,vy,life,color,gas?,size?}`; criada em coleta/superpum e descartada ao expirar |
 
 Não existem tabelas, coleções de servidor, schemas de API, migrations SQL ou arquivos de seed.
 
@@ -361,15 +372,17 @@ Dados extraídos da factory atual; índices são zero-based e fazem parte de vá
 
 | Índice / nome | Largura | Clima | Plataformas / NPCs / hazards / ossos | Checkpoints X |
 |---|---:|---|---|---|
-| 0 — Beira-Mar de Florianópolis | 8500 | sun | 32 / 9 / 5 / 74 | 1500, 3300, 5100, 6900 |
-| 1 — Parque Costa Azul | 9500 | cloud | 36 / 11 / 5 / 84 | 1500, 3300, 5100, 6900, 8700 |
-| 2 — Passeio Pedra Branca | 11000 | rain | 42 / 12 / 6 / 96 | 1500, 3300, 5100, 6900, 8700 |
-| 3 — Caminho Novo | 9500 | drizzle | 36 / 11 / 5 / 84 | 1500, 3300, 5100, 6900, 8700 |
-| 4 — Terra Nova | 6000 | sunset | 22 / 7 / 0 / 52 | 1500, 3300, 5100 |
+| 0 — Beira-Mar de Florianópolis | 8500 | sun | 30 / 9 / 4 / 68 | 4140, 7825 |
+| 1 — Parque Costa Azul | 9500 | cloud | 34 / 10 / 5 / 77 | 4420, 8825 |
+| 2 — Passeio Pedra Branca | 11000 | rain | 40 / 11 / 6 / 90 | 5160, 10325 |
+| 3 — Caminho Novo | 9500 | drizzle | 34 / 10 / 5 / 77 | 4420, 8825 |
+| 4 — Terra Nova | 6000 | sunset | 20 / 6 / 3 / 45 | 2760, 5325 |
 
-A factory repete padrões a cada 340 px, usa `n % 5`, cria chão com lacunas e marca a saída em `width-120`. Só o parque cria plataformas móveis; só índices 2/3 criam pisos escorregadios. Terra Nova continua tendo NPCs, mas não hazards. Não existe validação do argumento `index` na factory.
+A factory repete padrões a cada 340 px, usa `n % 5`, cria chão com lacunas e marca a saída em `width-120`. Só o parque cria plataformas móveis; só índices 2/3 criam pisos escorregadios. Todas as fases têm perigos estáticos e dois frangos; o trecho final tem chão contínuo para a arena e dois checkpoints por fase. Não existe validação do argumento `index` na factory.
 
 ### Dados visuais
+
+- beethoven-vasco-hd.png: RGBA 1671×941, 4×3, 12 poses com camisa preta/faixa branca/cruz vermelha. rat-hd.png: RGBA 1254×1254, 2×2, quatro poses exclusivas do rato gigante. Prompts/dimensões em docs/POWER_BOSS_ART.md; gerados por image_gen, pixels preservados. Coxas/perigos/gás usam Canvas nativo.
 
 - `public/assets/characters/beethoven/beethoven-hd.png`: RGBA 1672×941, 12 poses exclusivas, grade 4×3. Mantém branco/caramelo e orelhas assimétricas da referência; Beethoven.frame reutiliza as poses entre estados existentes.
 - `rivals-hd.png`: RGBA 1448×1086, grade 4×4; linhas pitbull, pastor-alemão, pinscher e rottweiler; colunas idle, duas passadas e latido. Nenhum rival reutiliza a imagem de Beethoven, inclusive na introdução.
@@ -377,7 +390,7 @@ A factory repete padrões a cada 340 px, usa `n % 5`, cria chão com lacunas e m
 - `family-hd.png`: RGBA 1774×887, grade 6×2; Júlia (branca, cabelo castanho escuro) e Elomir (cabelo preto), seis poses cada, altura lógica 68. humanSprites compartilha o recorte/escala de sprite; prompt em docs/FAMILY_PROMPT.md. Reutilizado na abertura/reencontro/final.
 - `src/data/assets.js` define arquivos, raças e dimensões lógicas; `spriteFrames.js` registra recortes alpha reais. `inspect_sprite_atlases.py` lê os PNGs e gera esses metadados, preservando as imagens. Renderer mantém escala comum por personagem e alinha os pés, sem reduzir os PNGs para células de 64×48.
 - Cinco fundos RGB de **2172×724**, com nomes originais acrescidos de `-hd.png`, em `public/assets/backgrounds/`; reconstruídos por image_gen a partir das referências. Renderer usa altura lógica de 272 e preserva a proporção, independente dos pixels de origem.
-- Originais de cenários em assets/source/backgrounds; fotos em assets/references/beethoven/photos; sprite original em assets/source/characters/beethoven; ZIP em assets/archives e sheet antiga em assets/legacy/characters/beethoven. Runtime usa somente nove PNGs HD em public/assets. Build web preserva essas subpastas; HTML offline embute os mesmos nove arquivos. São José continua sem fase.
+- Originais de cenários em assets/source/backgrounds; fotos em assets/references/beethoven/photos; sprite original em assets/source/characters/beethoven; ZIP em assets/archives e sheet antiga em assets/legacy/characters/beethoven. Runtime usa onze PNGs HD (cinco fundos + seis atlas) em public/assets. Build web preserva essas subpastas; HTML offline embute os mesmos onze arquivos. São José continua sem fase.
 - `prepare_assets.py` mantém o fluxo legado de redução/alpha para o antigo beethoven.png; não gera os HD. Geração atual usa a ferramenta integrada image_gen, prompts em docs/ART_PROMPTS.md e docs/BACKGROUND_PROMPTS.md, seguida de metadados por leitura alpha.
 - `Renderer.load` prefere data URI de window.BEETHOVEN_ASSETS; fora do offline carrega PNGs locais. Falhas vão para render.errors com aviso no footer; cenário tem cor substituta e personagem ausente não é desenhado. Não há retry de imagens.
 - Canvas adapta resolução ao tamanho CSS e DPR até 3840×2160, com suavização de imagens de alta qualidade; isso não transforma todos os PNGs em 4K. Primitivas/HUD permanecem programáticos; humanos usam atlas ilustrado.
@@ -449,19 +462,27 @@ Perfis/permissões do Codex, instalação de Docker no host e permissões do soc
 | [tests/logic.test.mjs](tests/logic.test.mjs) | 4 casos Node: save/versionamento/deduplicação, movimento e altura variável, coyote/buffer, geometria/checkpoints das cinco fases |
 | [tests/animals-input.test.mjs](tests/animals-input.test.mjs) | 3 casos Node: origens de input independentes, quatro raças/gatos neutros seguros e dimensões/recortes dos PNGs entregues |
 | [tests/flow.test.mjs](tests/flow.test.mjs) | 2 casos Node: interação dos sistemas e travessia integral por física/input; casos isolados reposicionam jogador; travessia não teletransporta |
-| [tests/production.test.mjs](tests/production.test.mjs) | 1 caso Node/VM: executa dist/Beethoven.html com harness; verifica menu, cinco cenários + quatro atlas do catálogo no manifesto e arquivos presentes; não testa bundle Vite |
+| [tests/production.test.mjs](tests/production.test.mjs) | 1 caso Node/VM: executa dist/Beethoven.html com harness; verifica menu, cinco cenários + seis atlas do catálogo no manifesto e arquivos presentes; não testa bundle Vite |
 | [tests/save.test.mjs](tests/save.test.mjs) | 2 casos Node registrados por `registerSaveCases` |
 | [tests/unit/save.test.js](tests/unit/save.test.js) | Mesmos 2 casos em Vitest, não uma cobertura independente adicional |
 | [tests/cases/saveCases.mjs](tests/cases/saveCases.mjs) | Escrita/leitura de checkpoint/configurações, reset, JSON inválido e storage recusado |
 | [tests/harness.mjs](tests/harness.mjs) | DOM/Image/Canvas/RAF e LocalStorage substitutos; importa main.js, exporta instâncias e tick/draw; não simula browser completo |
 | [tests/e2e.mjs](tests/e2e.mjs) | Chromium real: menu/assets, intro/skip, movimento/corrida, pulo/chão, mute/pause, reload/continuar, reset; E2E_FULL inclui cinco fases/final. Reinício aguarda intro/play; mute aguarda o rótulo após KeyM, sincronizando leituras com o loop de simulação |
+| [tests/power-boss.test.mjs](tests/power-boss.test.mjs) | 9 casos Node: distribuição, poder/pausa/expiração, hazards, ciclo do chefe, dano, saída bloqueada e retry/save |
+| [tests/combat-browser.mjs](tests/combat-browser.mjs) | Fixture interceptada do HTML offline: coleta por salto, voo/pausa/expiração, cinco chefes por teclas sem poder e multitoque. Posições escolhidas na fixture; sem API mutável em produção |
 | [tests/pages.mjs](tests/pages.mjs) | Chromium desktop/móvel em /beethoven/ com raiz retornando 404; nove imagens HD, início/movimento, link inicial, corrida por toque/rotação e HTML offline. Requer dist e Chromium; gera pages-report.json |
 | [scripts/render-qa.mjs](scripts/render-qa.mjs) | QA visual manual em Canvas nativo; não é runner de testes, não mede FPS nem verifica browser |
 | [tests/visual-mobile.mjs](tests/visual-mobile.mjs) | 9 checks Chromium: qualidade 4K; fullscreen nativo desktop/saída externa; menus/toque/cancelamento/save; paisagem ocupa >95% do maior 16:9; orientação CDP/barras 390→320→390; fullscreen móvel com rotação; fallback recusado em fixture. Capturas incluem mobile-fullscreen.png; sem execução física/Safari |
 | [tests/story-render.test.mjs](tests/story-render.test.mjs) | 3 casos Node: Run sozinho/sentido/soltura, timeline de passeio/guia/fuga e fase periódica para câmera negativa/distante |
 | [tests/parallax-family.mjs](tests/parallax-family.mjs) | 3 checks Chromium: quarto atlas/alturas humanas, comparação de pixels de emenda e limite temporal em cinco fundos, capturas da abertura em fixture offline temporal. E2E_BASE_URL usa o HTML offline do serviço, não dist antigo do container |
 
-### Estado atual — organização de assets, 2026-11-03
+### Estado atual — superfrango, perigos e chefes, 2026-11-04
+
+- Typecheck/build web/offline, dois Vitest e 24 Node aprovados. Travessia simulada completa com combate por inputs: 337 s lógicos, 73 ossos e zero retries.
+- Sete E2E curtos, nove checks móveis/visuais/fullscreen e três de família/parallax aprovados no build atual. Três checks de combate Chromium aprovados: poderes, cinco chefes sem frango, multitoque/barra móvel sem sobreposição. Três checks Pages aprovados; sem resultado remoto de CI/Pages declarado.
+- Arte: onze PNGs, dois atlas novos com alpha/recortes verificados. Não houve nova validação física/Safari. Documentação de controles/arte/design atualizada.
+
+### Histórico — organização de assets, 2026-11-03
 
 - Runtime em public/assets/backgrounds/<localidade> e characters/{beethoven,rivals,cats,family}, nove PNGs. Materiais de autoria em assets/{references,source,archives,legacy}, fora de public/dist e do contexto Docker. Estrutura em assets/README.md.
 - Caminhos relativos à raiz public/assets são compartilhados entre catálogo/factory, Renderer, recortes e manifesto offline. HTTP /assets/<caminho>; não há prefixos ../characters. Scripts, testes e docs foram atualizados.
@@ -518,7 +539,7 @@ Com npm e dependências disponíveis, fluxo esperado: `npm run build` → `npm t
 
 1. **Vite:** `index.html` → bootstrap TS → build web em `dist`; em seguida `build:offline` acrescenta o HTML autocontido. `--offline-only` evita apagar o índice/assets produzidos pelo Vite.
 2. **Alternativo Node:** `scripts/build.mjs` valida sintaxe de `src/**/*.js` por SourceTextModule, apaga/recria `dist`, copia src/assets e transforma a entrada HTML de TS em JS. Não transpila nem verifica TypeScript.
-3. **HTML offline:** percorre imports nomeados desde src/main.js, cria factories async/cache e incorpora CSS, cinco fundos de levels.map(bg) e quatro atlas de characterFiles em base64; grava dist/Beethoven.html. Bootstrap TS não executa nesse caminho; Renderer adapta resolução, sprites e parallax nos dois builds.
+3. **HTML offline:** percorre imports nomeados desde src/main.js, cria factories async/cache e incorpora CSS, cinco fundos de levels.map(bg) e seis atlas de characterFiles em base64; grava dist/Beethoven.html. Bootstrap TS não executa nesse caminho; Renderer adapta resolução, sprites e parallax nos dois builds.
 4. **Servidor de produção:** serve apenas `dist` por `scripts/serve.mjs`; não necessita de node_modules para o motor atual.
 
 ### Dockerfile
@@ -545,7 +566,7 @@ A .dockerignore exclui Git/configurações protegidas, node_modules, dist/result
 - `docker compose --profile test run --rm tests`: validação após construir a imagem apropriada.
 - `docker compose up -d --build --wait beethoven` pode ser executado sem passar pelo helper; **não** implica testes aprovados.
 - Código montado em dev não inclui alterações de configs/package.json em tempo real; mudanças dessas configurações requerem rebuild/cópia apropriada.
-- `.github/workflows/pages.yml` prepara publicação no GitHub Pages a cada push em main ou execução manual: Node 24, build, npm test, Chromium/test:pages, configure-pages v5, upload-pages-artifact v4 somente dist e deploy-pages v4. Checkout e setup-node usam v6; deploy tem pages:write/id-token:write e ambiente github-pages. Jobs têm timeout; publicações são serializadas.
+- `.github/workflows/pages.yml` prepara publicação no GitHub Pages a cada push em main ou execução manual: Node 24, build, npm test, Chromium/test:pages/test:combat, configure-pages v5, upload-pages-artifact v4 somente dist e deploy-pages v4. Checkout e setup-node usam v6; deploy tem pages:write/id-token:write e ambiente github-pages. Jobs têm timeout; publicações são serializadas.
 - É necessário habilitar Source=GitHub Actions em Settings → Pages. O remote origin local é https://github.com/elomir21/beethoven.git; URL padrão esperada https://elomir21.github.io/beethoven/. Não houve push, ativação de Pages nem execução remota comprovada nesta preparação. README contém o procedimento; GitHub Free exige repositório público para Pages.
 - Vite usa base relativa ./; Renderer usa ./assets/<caminho> relativo ao documento e Página inicial aponta para ./, preservando o prefixo do repositório. O build offline segue usando o manifesto embutido. O servidor Node local não monta subdiretórios de projeto; tests/pages.mjs fornece esse servidor apenas para QA.
 - Não há ambiente staging separado, domínio personalizado, registry de publicação, Kubernetes, Helm ou Terraform. Docker permanece o caminho de operação local; o Pages recebe arquivos estáticos e dispensa Node/Docker em produção.
@@ -562,7 +583,7 @@ A .dockerignore exclui Git/configurações protegidas, node_modules, dist/result
 | Média | Bundler offline artesanal por regex, assume grafo e sintaxes específicas; troca do HTML depende de string exata | scripts/build.mjs; testar os dois caminhos após mudar imports/entrada |
 | Média | Testes Node alteram globais e compartilham instâncias/tempo; isolamento entre arquivos foi desativado; harness não reproduz eventos/Canvas/browser completos | package.json, tests/harness.mjs, flow/production/save tests |
 | Média | Save grava sincronamente a cada osso; falha é silenciosa; não migra versões anteriores e não persiste HP/tempo/posição exata | Save.js e pontos de write em main.js |
-| Média | `retry()` restaura jogador, mas preserva NPCs/tempo de fase; não há rotina explícita de teardown dos sistemas/listeners nem tratamento central de erros de loop | Game.retry, Input.constructor, frame |
+| Média | `retry()` restaura jogador/chefe invicto/frangos, mas preserva outros NPCs/tempo de fase; não há rotina explícita de teardown dos sistemas/listeners nem tratamento central de erros de loop | Game.retry, Input.constructor, frame |
 | Média | Corpo usa y no topo, enquanto docs/ARCHITECTURE.md descreve posição como pés; seguir a implementação para não deslocar colisores | Beethoven.constructor, physics.move, Renderer.level |
 | Média | Beethoven reaproveita 12 poses HD; raça rival/gato tem quatro e dono tem seis poses. Primitivas ainda simplificadas; duração humana de 15–25 min não demonstrada | Beethoven.frame, Renderer, levels, docs/ASSETS.md |
 | Média | Cenários compostos repetidos, padrões de fase semelhantes; nuvens/mobiliário fornecem camadas, não fundos originais separados | Renderer.background/level, levels.js |
@@ -576,6 +597,17 @@ A .dockerignore exclui Git/configurações protegidas, node_modules, dist/result
 Os débitos de arquitetura/arte continuam documentados; a tarefa de disponibilização corrigiu a sincronização do teste de reinício e iniciou o serviço local. Nenhum valor de secret/credencial foi copiado para o documento.
 
 ## Última Atualização
+
+### Superfrango, perigos e chefes concluídos — 2026-11-04, America/Sao_Paulo
+
+- **Poder:** duas coxas escondidas entre folhas de plataformas por fase, brilho e revelação por proximidade. Comer ativa camisa do Vasco por 20 s, impulso inicial e superpum; segurar salto sustenta o voo, soltar desce. Timer congela na pausa, teto mantém o jogador na tela, não há imunidade. Gás acalma cães e causa dois danos no chefe próximo.
+- **Perigos/checkpoints:** bike/swing/puddle substituídos por vidro, espinhos e pontas metálicas estáticos nas cinco fases. Exatamente duas bandeiras por fase: meio seguro e pré-arena. Último trecho tem chão contínuo para a luta. Tabela de conteúdos extraída da factory atual.
+- **Combate:** novo src/entities/Boss.js com Mingau/tabby (5 HP), Brutus/pitbull (6), Ratão/rat (7), Sombra/tuxedo (7) e Titã/rottweiler (9). Aproximação, aviso, investida e recuperação; latido frontal fora da investida, pisão com quique e superpum causam dano com cooldown. Avisos não são cancelados por spam de latido; pisão/gás interrompem investida. Arena bloqueia recuo/saída mesmo em voo; transições e último portão exigem vitória.
+- **Persistência/retomada:** Save v1 aceita bosses ausente em saves antigos, filtra índices únicos 0–4 e persiste vitórias. Retry reinicia chefe invicto, repõe frangos e remove poder; vitória permanece. Checkpoint antigo migra para a bandeira anterior mais próxima. Snapshot continua somente leitura e inclui face, poder/frangos e estado/vida/tempo do chefe.
+- **Arte/UI:** dois atlas novos (Vasco 1671×941 RGBA 4×3; rato 1254×1254 RGBA 2×2), seis atlas e cinco fundos no catálogo/build offline. Originais preservados, recortes regenerados sem editar PNGs. Frango, perigos e gás são Canvas nativo. Renderer.bossBar evita a toolbar sobreposta em paisagem/fullscreen; botão Pular muda para Voar. Novos sons sintetizados de frango/superpum/combate/vitória. Prompts completos em docs/POWER_BOSS_ART.md; README, ASSETS, assets/README e GAME_DESIGN atualizados.
+- **Testes:** nove casos novos em tests/power-boss.test.mjs, total de 24 Node e dois Vitest aprovados; typecheck/build web/offline aprovados. Travessia integral por física/inputs: 337 s lógicos, 73 ossos, cinco chefes e zero retries. Sete E2E curtos aprovados diretamente no serviço final e três Pages aprovados no último build; durante esta tarefa passaram também nove checks visuais/móveis/fullscreen e três de família/parallax. Relatório atual em docs/TEST_REPORT.md.
+- **Browser de combate:** tests/combat-browser.mjs intercepta HTML offline só para QA e escolhe posições via exports existentes; usa teclas reais nas lutas, sem editar HP/poder. Última execução venceu os cinco chefes sem retries (8/8/10/10/13 s), confirmou descoberta por salto, camisa/voo/pausa/expiração e multitoque móvel. Verifica geometricamente a barra do chefe abaixo da toolbar; capturas desktop/móvel inspecionadas. Piloto pode usar até três tentativas pelo botão real; resultados registram HP/retries. test:combat integra verify e workflow Pages; E2E_FULL atualizado para combate, mas travessia integral em browser não repetida.
+- **Operação:** produção Docker final saudável em 0.0.0.0:5173, Wi-Fi 192.168.2.181 respondeu HTTP 200. Os 16 arquivos servidos (11 PNGs, JS/CSS e HTMLs web/offline) têm SHA-256 idêntico ao dist testado; referência/origem/src retornam 404. Evidências em combat-report.json e served-artifacts-report.json. Sem push/deploy Pages remoto, teste físico/Safari, benchmark de desempenho ou audição nesta tarefa.
 
 ### Preparação para GitHub Pages concluída localmente — 2026-11-03, America/Sao_Paulo
 

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {Input} from '../src/systems/Input.js';
 import {makeLevel} from '../src/data/levels.js';
-import {dogBreeds,characterFiles} from '../src/data/assets.js';
+import {dogBreeds,characterFiles,animalSprites,humanSprites} from '../src/data/assets.js';
 import {spriteFrames} from '../src/data/spriteFrames.js';
 import {canvas,game,tick} from './harness.mjs';
 
@@ -31,7 +31,8 @@ test('atlas HD e recortes correspondem aos PNGs entregues, sem quadros fora da i
  for(const file of characterFiles){
   const bytes=await readFile('public/assets/'+file),layout=spriteFrames[file];
   assert.equal(bytes.readUInt32BE(16),layout.width);assert.equal(bytes.readUInt32BE(20),layout.height);
-  assert(layout.width>1000);assert.equal(layout.frames.length,file.endsWith('/beethoven-hd.png')||file.endsWith('/family-hd.png')?12:file.endsWith('/rivals-hd.png')?16:8);
+  const spec=Object.values({...animalSprites,...humanSprites}).find(s=>s.file===file);
+  assert(layout.width>1000);assert.equal(layout.frames.length,spec.columns*spec.rows);
   for(const frame of layout.frames){assert(frame.w>50&&frame.h>50);assert(frame.x>=0&&frame.y>=0);assert(frame.x+frame.w<=layout.width&&frame.y+frame.h<=layout.height)}
  }
 });

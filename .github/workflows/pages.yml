@@ -35,6 +35,8 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Validar jogo no caminho do repositório
         run: npm run test:pages
+      - name: Validar superpoder e combate no navegador
+        run: npm run test:combat
       - name: Configurar Pages
         uses: actions/configure-pages@v5
       - name: Enviar somente a distribuição

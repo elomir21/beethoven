@@ -4,16 +4,26 @@ Antes de alterar o projeto, consulte o [mapeamento técnico e operacional](proje
 
 Aventura de plataforma para teclado e toque, com cinco fases na Grande Florianópolis, introdução, checkpoints, save e reencontro final.
 
-Os assets de execução ficam em `public/assets/backgrounds/<localidade>/` e `public/assets/characters/{beethoven,rivals,cats,family}/`. Materiais de origem, fotos, ZIP e legado ficam separados em `assets/`, fora da distribuição. Veja a [organização dos assets](assets/README.md) e o [catálogo de arte](docs/ASSETS.md).
+Os assets de execução ficam em `public/assets/backgrounds/<localidade>/` e `public/assets/characters/{beethoven,rivals,cats,family,bosses}/`. Materiais de origem, fotos, ZIP e legado ficam separados em `assets/`, fora da distribuição. Veja a [organização dos assets](assets/README.md) e o [catálogo de arte](docs/ASSETS.md).
 
 Agora também funciona com controles de toque no navegador do celular. A área do jogo mantém **16:9** em retrato ou paisagem; a resolução de desenho acompanha a tela e sua densidade de pixels, até **3840×2160**, preservando a física original. Beethoven tem atlas exclusivo; os outros cães são pitbulls, pastores-alemães, pinschers e rottweilers. Gatos neutros passeiam pelos cenários, observam Beethoven e reagem ao latido.
 
+## Superfrango, voo e chefes
+
+Duas coxas de frango ficam escondidas entre as folhas de plataformas em cada fase. Um brilho indica o esconderijo; ao chegar perto, o frango aparece. Encoste nele para Beethoven comer e vestir a **camisa do Vasco por 20 segundos**. Ele dá um superpum com impulso inicial; segure **Espaço / W / ↑** ou **Voar** no celular para continuar subindo. Solte para descer e combine com as direções ou **Correr** para passar sobre os animais e obstáculos. O tempo restante aparece no HUD. A camisa não protege contra dano e o poder não é salvo ao sair.
+
+Os perigos são **cacos de vidro, espinhos e pontas metálicas**, inclusive em Terra Nova. Cada fase tem **dois checkpoints**: um pelo meio do percurso e outro antes do chefe. Saves antigos retomam na bandeira anterior mais próxima.
+
+Cinco chefes guardam as saídas: **Mingau** (gato da orla), **Brutus** (pitbull do parque), **Ratão** (rato gigante da Pedra Branca), **Sombra** (gato do Caminho Novo) e **Titã** (rottweiler do portão). Observe o aviso da investida, pule para desviar e use **E / Latir** de frente para o chefe na recuperação. Saltar sobre ele também causa dano; o superpum e os ataques com a camisa são mais fortes. É possível vencer sem encontrar frango. A saída só abre após a vitória, inclusive no último portão.
+
+Ao tentar novamente, a luta invicta recomeça e os frangos reaparecem. Chefes já vencidos ficam registrados no save. Reiniciar o jogo limpa esse progresso. Sprites e prompts novos: [POWER_BOSS_ART.md](docs/POWER_BOSS_ART.md). `npm run test:combat` verifica os poderes e as cinco lutas no Chromium; inclui uma fixture que escolhe posições para QA, sem adicionar comandos de teletransporte ao jogo publicado.
+
 ## Publicar no GitHub Pages
 
-O jogo roda inteiramente no navegador. A publicação usa somente `dist/`, incluindo os nove PNGs de execução e a edição offline; Docker e Node não são necessários para jogar no site.
+O jogo roda inteiramente no navegador. A publicação usa somente `dist/`, incluindo os onze PNGs de execução e a edição offline; Docker e Node não são necessários para jogar no site.
 
 1. No repositório do GitHub, abra **Settings → Pages → Build and deployment → Source** e selecione **GitHub Actions**.
-2. Envie estas alterações para a branch `main`. O workflow [pages.yml](.github/workflows/pages.yml) instala as ferramentas, gera o build, executa testes de lógica e de navegador no caminho `/beethoven/` e publica a distribuição. Também pode ser iniciado em **Actions → Publicar jogo no GitHub Pages → Run workflow** depois que o arquivo estiver no GitHub.
+2. Envie estas alterações para a branch `main`. O workflow [pages.yml](.github/workflows/pages.yml) instala as ferramentas, gera o build, executa testes de lógica, combate e navegador no caminho `/beethoven/` e publica a distribuição. Também pode ser iniciado em **Actions → Publicar jogo no GitHub Pages → Run workflow** depois que o arquivo estiver no GitHub.
 3. Aguarde o job `deploy` concluir. Para `elomir21/beethoven`, o endereço padrão esperado é **https://elomir21.github.io/beethoven/**. A URL efetiva aparece no ambiente `github-pages` e em Settings → Pages.
 
 Vite e carregamento das imagens usam caminhos relativos, compatíveis com o subdiretório do repositório e a raiz de um domínio. `npm run test:pages` valida o build em um servidor temporário que rejeita URLs fora de `/beethoven/`, incluindo imagens, navegação inicial, toque/rotação e HTML autocontido. Execute `npm run build` antes dele; requer Chromium como os demais testes de browser. O workflow usa Node 24 e instala o Chromium pelo Playwright.
@@ -90,7 +100,7 @@ As portas são publicadas somente em localhost. Resultados de navegador ficam em
 
 As dependências estão declaradas em `package.json`. O primeiro build usa `npm install` e gera um lockfile dentro da imagem; não foi possível gerar/validar um `package-lock.json` no host nesta sessão. Se houver lockfile no projeto, o Dockerfile passa a usar `npm ci`.
 
-**Validação:** typecheck, build Vite/offline, dois testes Vitest e 15 testes Node. Chromium cobre controles, save, reinício e corrida com um botão; a suíte visual tem nove checks de desktop/celular/fullscreen e `test:story` tem três checks de sprites, pixels de emenda do parallax e abertura. Resultados atuais e evidências do serviço publicado estão em [TEST_REPORT.md](docs/TEST_REPORT.md); a travessia integral em navegador da versão HD permanece registrada no histórico. Node/npm não precisam estar no PATH do host.
+**Validação:** typecheck, build Vite/offline, dois testes Vitest e 24 testes Node. Chromium cobre controles, save, reinício e corrida com um botão; a suíte visual tem nove checks de desktop/celular/fullscreen e `test:story` tem três checks de sprites, pixels de emenda do parallax e abertura. Resultados atuais e evidências do serviço publicado estão em [TEST_REPORT.md](docs/TEST_REPORT.md); a travessia integral em navegador da versão HD permanece registrada no histórico. Node/npm não precisam estar no PATH do host.
 
 ### Chromium
 `/etc/chromium` contém configurações, não o executável. O estágio de testes instala seu próprio navegador em **`/usr/bin/chromium`** e define `CHROMIUM_EXECUTABLE_PATH`. Não depende do Chromium do host ou do Flatpak.

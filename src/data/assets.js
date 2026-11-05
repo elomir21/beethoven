@@ -1,6 +1,6 @@
 // One catalog shared by the renderer and the self-contained HTML build.
 // Paths are relative to public/assets and are also the offline manifest keys.
-export const characterFiles=['characters/beethoven/beethoven-hd.png','characters/rivals/rivals-hd.png','characters/cats/cats-hd.png','characters/family/family-hd.png'];
+export const characterFiles=['characters/beethoven/beethoven-hd.png','characters/rivals/rivals-hd.png','characters/cats/cats-hd.png','characters/family/family-hd.png','characters/beethoven/beethoven-vasco-hd.png','characters/bosses/rat-hd.png'];
 export const dogBreeds=['pitbull','shepherd','pinscher','rottweiler'];
 export const catCoats=['tabby','tuxedo'];
 export const humanSprites={
@@ -9,6 +9,8 @@ export const humanSprites={
 };
 export const animalSprites={
  beethoven:{file:'characters/beethoven/beethoven-hd.png',columns:4,rows:3,width:48,height:36},
+ beethovenVasco:{file:'characters/beethoven/beethoven-vasco-hd.png',columns:4,rows:3,width:48,height:36},
+ rat:{file:'characters/bosses/rat-hd.png',columns:2,rows:2,width:84,height:62},
  pitbull:{file:'characters/rivals/rivals-hd.png',columns:4,rows:4,row:0,width:46,height:34},
  shepherd:{file:'characters/rivals/rivals-hd.png',columns:4,rows:4,row:1,width:50,height:38},
  pinscher:{file:'characters/rivals/rivals-hd.png',columns:4,rows:4,row:2,width:35,height:30},

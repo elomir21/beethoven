@@ -36,7 +36,7 @@ try{
  page.on('pageerror',e=>report.errors.push(e.message));
  page.on('response',r=>{if(r.status()>=400&&!isBrowserIcon(r.url()))failed.push(r.url())});
  page.on('requestfailed',r=>{if(!isBrowserIcon(r.url()))failed.push(r.url())});
- await check('Build Vite, nove imagens HD e início no subdiretório /beethoven/',async()=>{
+ await check('Build Vite, todos os assets HD e início no subdiretório /beethoven/',async()=>{
   await page.goto(url);await page.getByRole('button',{name:'Jogar',exact:true}).waitFor();
   assert.deepEqual(await page.evaluate(()=>window.beethoven.snapshot().errors),[]);
   const loaded=await page.evaluate(()=>performance.getEntriesByType('resource').map(r=>r.name));

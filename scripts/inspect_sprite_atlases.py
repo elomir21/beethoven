@@ -5,7 +5,7 @@ from PIL import Image
 
 root = Path(__file__).resolve().parents[1]
 layouts = {}
-for name, columns, rows in [('characters/beethoven/beethoven-hd.png', 4, 3), ('characters/rivals/rivals-hd.png', 4, 4), ('characters/cats/cats-hd.png', 4, 2), ('characters/family/family-hd.png', 6, 2)]:
+for name, columns, rows in [('characters/beethoven/beethoven-hd.png', 4, 3), ('characters/rivals/rivals-hd.png', 4, 4), ('characters/cats/cats-hd.png', 4, 2), ('characters/family/family-hd.png', 6, 2), ('characters/beethoven/beethoven-vasco-hd.png', 4, 3), ('characters/bosses/rat-hd.png', 2, 2)]:
     image = Image.open(root / 'public/assets' / name).convert('RGBA')
     alpha = image.getchannel('A').point(lambda a: 255 if a >= 32 else 0)
     frames = []
