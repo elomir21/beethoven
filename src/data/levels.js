@@ -1,5 +1,6 @@
 import {dogBreeds,catCoats} from './assets.js';
 import {Boss} from '../entities/Boss.js';
+import {Rival} from '../entities/Rival.js';
 const themes=[
  ['Beira-Mar de Florianópolis','O começo da jornada','backgrounds/beira-mar-florianopolis/03_beira_mar_florianopolis-hd.png',8500,'sun','O cheiro do mar ficou para trás. Entre caminhos e novas paisagens, Beethoven chegou ao Parque Costa Azul.'],
  ['Parque Costa Azul','Aventuras no parque','backgrounds/parque-costa-azul/04_parque_costa_azul-hd.png',9500,'cloud','Depois do parque, uma longa travessia o levou até Palhoça. As primeiras gotas caíam no Passeio Pedra Branca.'],
@@ -13,7 +14,7 @@ export function makeLevel(index){const [name,subtitle,bg,width,weather,story]=th
   const section=n%5;const height=section===2?170:section===3?177:194;
   platforms.push({x:x+40,y:height,w:section===2?105:80,h:10,oneWay:true,moving:index===1&&section===2,origin:x+40,phase:n});
   if(section===1||section===4){const gap=index===0?48:index===4?40:60;gaps.push({x:x+155,w:gap});platforms.push({x:x+125,y:185,w:110,h:10,oneWay:true})}
-  if(section===0||section===3)dogs.push({breed:dogBreeds[(dogs.length+index)%dogBreeds.length],x:x+170,y:199,w:28,h:23,origin:x+170,range:55,vx:20+index*3,state:'patrol',calm:0});
+  if(section===0||section===3)dogs.push(new Rival(dogBreeds[(dogs.length+index)%dogBreeds.length],x+170,20+index*3));
   if(section===2)hazards.push({x:x+190,y:208,w:34,h:14,type:['glass','thorns','spikes'][(hazards.length+index)%3]});
   if(section===2&&chickens.length===0)chickens.push({id:`chicken-${index}-0`,x:x+78,y:height-18,w:16,h:16,eaten:false,revealed:false});
   if((index===2||index===3)&&section===4)slippery.push({x:x-25,w:150});

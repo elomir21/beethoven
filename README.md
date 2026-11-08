@@ -14,7 +14,7 @@ Duas coxas de frango ficam escondidas entre as folhas de plataformas em cada fas
 
 Os perigos são **cacos de vidro, espinhos e pontas metálicas**, inclusive em Terra Nova. Cada fase tem **dois checkpoints**: um pelo meio do percurso e outro antes do chefe. Saves antigos retomam na bandeira anterior mais próxima.
 
-Cinco chefes guardam as saídas: **Mingau** (gato da orla), **Brutus** (pitbull do parque), **Ratão** (rato gigante da Pedra Branca), **Sombra** (gato do Caminho Novo) e **Titã** (rottweiler do portão). Observe o aviso da investida, pule para desviar e use **E / Latir** de frente para o chefe na recuperação. Saltar sobre ele também causa dano; o superpum e os ataques com a camisa são mais fortes. É possível vencer sem encontrar frango. A saída só abre após a vitória, inclusive no último portão.
+Cinco chefes guardam as saídas: **Mingau** (gato da orla), **Brutus** (pitbull do parque), **Ratão** (rato gigante da Pedra Branca), **Sombra** (gato do Caminho Novo) e **Titã** (rottweiler do portão). Observe o aviso da investida, pule para desviar e ataque de frente na recuperação com **J / Patada**, **K / Morder** ou **E / Latir**. Patadas são rápidas e alcançam mais longe; mordidas exigem proximidade e causam dois danos. Saltar sobre ele também causa dano; o superpum e os ataques com a camisa são mais fortes. É possível vencer sem encontrar frango. A saída só abre após a vitória, inclusive no último portão.
 
 Ao tentar novamente, a luta invicta recomeça e os frangos reaparecem. Chefes já vencidos ficam registrados no save. Reiniciar o jogo limpa esse progresso. Sprites e prompts novos: [POWER_BOSS_ART.md](docs/POWER_BOSS_ART.md). `npm run test:combat` verifica os poderes e as cinco lutas no Chromium; inclui uma fixture que escolhe posições para QA, sem adicionar comandos de teletransporte ao jogo publicado.
 
@@ -124,7 +124,7 @@ npm test
 npm run test:e2e
 ```
 
-`npm run dev` e `npm run preview` usam Vite em 5173. `npm run build` valida a entrada TypeScript, gera o build Vite e o HTML autocontido. `npm test` executa dois casos Vitest e 15 testes Node. O teste de produção pressupõe um build prévio. `npm run test:visual` valida desktop/4K e controles multitoque em celulares emulados; `npm run test:story` verifica sprites humanos, continuidade dos cinco fundos e capturas da abertura. Ambos integram verify e geram relatórios/capturas em test-results.
+`npm run dev` e `npm run preview` usam Vite em 5173. `npm run build` valida a entrada TypeScript, gera o build Vite e o HTML autocontido. `npm test` executa dois casos Vitest e 32 testes Node. O teste de produção pressupõe um build prévio. `npm run test:visual` valida desktop/4K e controles multitoque em celulares emulados; `npm run test:story` verifica sprites humanos, continuidade dos cinco fundos e capturas da abertura. Ambos integram verify e geram relatórios/capturas em test-results.
 
 Alternativa sem dependências npm, preservada para ambientes restritos:
 
@@ -139,12 +139,18 @@ Vite e uma entrada TypeScript estrita estão configurados para executar o jogo e
 
 ## Controles
 
+Cães rivais têm 2–3 pontos de vida, avisam antes de investir e recuam quando atingidos. Ao perderem a vida, se rendem e deixam de atacar. Latir continua acalmando os rivais. Retry ou recarregar a fase restaura as lutas comuns; vitórias contra chefes continuam salvas. Gatos que passeiam pelo cenário permanecem neutros.
+
+No celular, os botões **Patada** e **Morder** ficam acima de **Latir** e **Pular/Voar**, à direita; os controles de movimento ficam à esquerda. A faixa nos ataques indica a recarga compartilhada. Toque novamente para cada golpe.
+
 | Tecla | Ação |
 |---|---|
 | A/D ou ←/→ | Andar |
 | Shift | Correr |
 | Espaço/W/↑ | Pular; segurar aumenta a altura |
-| E | Latir, acalmar cães e chamar os donos no portão |
+| E | Latir, acalmar cães, atacar chefes e chamar os donos no portão |
+| J | Patada: rápida, 1 dano e maior alcance |
+| K | Morder: 2 danos de perto, recuperação maior |
 | Esc | Pausar/retomar; pular cutscene |
 | Enter | Avançar cenas e transições |
 | M | Silenciar |
@@ -154,6 +160,6 @@ Vite e uma entrada TypeScript estrita estão configurados para executar o jogo e
 Clique no jogo para devolver o foco. Ossinhos são opcionais. Checkpoints restauram vida. No Terra Nova, pressione E perto do portão para iniciar o reencontro.
 
 ## Qualidade e pendências
-Dois testes Vitest e 15 testes Node verificam progressão integral, dano, pausa, latido, checkpoint, persistência, gatos neutros, multitoque, corrida direta, timeline da abertura e contratos de atlas/offline. Testes Chromium verificam desktop, celular, fullscreen, emendas do parallax e sprites/animação da família. Capturas e relatórios atuais ficam em test-results; renders Canvas anteriores em docs/screenshots são históricos.
+Dois testes Vitest e 32 testes Node verificam progressão integral, dano, pausa, latido, patadas/mordidas, rivais/chefes, checkpoint, persistência, gatos neutros, multitoque, corrida direta, timeline da abertura e contratos de atlas/offline. Testes Chromium verificam desktop, celular, fullscreen, emendas do parallax e sprites/animação da família. Capturas e relatórios atuais ficam em test-results; renders Canvas anteriores em docs/screenshots são históricos.
 
 Ainda não há teste em aparelho físico/Safari, medição de FPS/memória, audição da trilha ou playtest humano atual. A simulação eficiente leva cerca de 5 minutos mais narrativa; a meta de 15–25 minutos não foi demonstrada. Primitivas e variedade adicional das fases continuam passíveis de refinamento. Veja [ASSETS.md](docs/ASSETS.md) e [TEST_REPORT.md](docs/TEST_REPORT.md) para os limites e evidências.

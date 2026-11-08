@@ -69,7 +69,7 @@ play ↔ pause → menu / retry
 play → over → retry / menu
 ```
 
-`start(index, resume)` recria os dados do nível e a entidade; `retry()` recria apenas o jogador no checkpoint e restaura seus três corações. Temporizadores de NPCs, fase global e ossos já coletados não são zerados por `retry()`. O chefe invicto reinicia com vida cheia, os frangos reaparecem e o poder é removido; chefes vencidos continuam vencidos.
+`start(index, resume)` recria os dados do nível e a entidade; `retry()` recria apenas o jogador no checkpoint e restaura seus três corações. Cães rivais voltam à origem com vida/temporizadores restaurados em `retry()`; gatos, fase global e ossos já coletados são preservados. O chefe invicto reinicia com vida cheia, os frangos reaparecem e o poder é removido; chefes vencidos continuam vencidos.
 
 ## Stack Tecnológica
 
@@ -120,6 +120,7 @@ Não há ORM, framework de UI, banco, cache remoto, SDK cloud ou dependência de
 │   ├── engine/physics.js           clamp, overlap, move
 │   ├── entities/Beethoven.js       Jogador, física, superfrango e voo
 │   ├── entities/Boss.js            Cinco chefes, arena e ciclo de ataques
+│   ├── entities/Rival.js           Cães rivais com vida, aviso, investida e rendição
 │   ├── render/Renderer.js          Mundo, clima, sprites, HUD e narrativa
 │   ├── render/parallax.js          Faixa de cenário contínua e fase cíclica
 │   └── systems/
@@ -162,6 +163,7 @@ Não há ORM, framework de UI, banco, cache remoto, SDK cloud ou dependência de
 │   ├── visual-mobile.mjs           Qualidade 4K, layout e multitoque em browser
 │   ├── pages.mjs                   Build em /beethoven/, assets, toque/rotação e HTML offline
 │   ├── power-boss.test.mjs          Poder, dano, arenas, combate, retry e save
+│   ├── melee.test.mjs               Patadas/mordidas, alcance, rivais, chefes e ciclo de vida
 │   └── combat-browser.mjs          Voo/pausa/expiração, cinco lutas e multitoque
 ├── docker/mobile.env              Preset opcional para acesso pela rede local
 ├── docker/run.sh                   Preflight → teste → produção saudável
@@ -192,7 +194,7 @@ Criticidade: **alta** impede iniciar, controlar, salvar ou concluir a aventura; 
 |---|---|---|---|
 | Entrada | `index.html`, `src/bootstrap.ts` | Canvas lógico 480×270, estágio 16:9; #game-shell contém estágio/narrativa/toque/toolbar; #fullscreen alterna exibição e #display-status anuncia fallback; importa main.js | Alta |
 | Orquestrador | `src/main.js` / `Game` | `menu`, `controls`, `story`, `nextPart`, `start`, `hint`, `pause`, `resume`, `retry`, `hurt`, `transition`, `finish`, `update`, `draw`, `panel`; coordena todos os demais módulos | Alta |
-| Jogador | `src/entities/Beethoven.js` / `Beethoven` | `update` altera corpo/estado; `frame(t)` seleciona pose; recebe input, sólidos e áudio; depende de `physics.js` | Alta |
+| Jogador | `src/entities/Beethoven.js` / `Beethoven` | `update` altera corpo/estado; `strike/attackBox/attacks` definem golpes frontais; `frame(t)` seleciona pose; recebe input, sólidos e áudio; depende de `physics.js` | Alta |
 | Física | `src/engine/physics.js` | `clamp`, `overlap`, `move`; colisão horizontal e vertical separadas, chão e plataformas de sentido único | Alta |
 | Input | `src/systems/Input.js` / `Input` | `down`/`pressed`, origens de teclado/ponteiros em `sources`, `press`, `release`, `has`, `hit`, `end`, `clear`; captura/cancelamento multitoque, foco do canvas | Alta |
 | Exibição | src/systems/Display.js / Display | Observa visualViewport/resize/orientation/fullscreen, publica variáveis CSS da área visível, atualiza Renderer.resize; tela cheia inclui controles; fallback ampliado quando API ausente/recusada | Alta |
@@ -200,11 +202,12 @@ Criticidade: **alta** impede iniciar, controlar, salvar ou concluir a aventura; 
 | Áudio | `src/systems/Audio.js` / `AudioSystem` | `unlock`, `tone`, `sfx`, `update`; cinco sequências de notas, efeitos e chuva sintetizados | Média; jogo não depende dele |
 | Níveis | `src/data/levels.js` / `makeLevel`, `levels` | Gera mapas novos por índice, com raças nos cães e gatos neutros; catálogo de assets fornece raças/pelagens; Game.start recria a factory | Alta |
 | Narrativa | `src/data/story.js` / `intro`, `ending` | Arrays de cenas `{place,title,text,duration}`; Game controla avanço e Renderer compõe a cena | Alta para narrativa/progressão |
-| Renderização | `src/render/Renderer.js` / `Renderer` | `resize`, `load`, `animal`, `dog`, cenário/HUD/cutscenes; HiDPI até 4K, catálogo de atlas e recortes alpha; Beethoven exclusivo, raças e gatos com poses próprias | Alta |
+| Renderização | `src/render/Renderer.js` / `Renderer` | `resize`, `load`, `animal`, `dog`, `player/rival` com golpes/vida/avisos, cenário/HUD/cutscenes; HiDPI até 4K, catálogo de atlas e recortes alpha; Beethoven exclusivo, raças e gatos com poses próprias | Alta |
 | Catálogo de arte | src/data/assets.js, src/data/spriteFrames.js | Contratos de arquivo/grade/tamanho lógico, raças/pelagens e recortes gerados a partir dos PNGs; compartilhados entre Renderer, build, testes e QA | Alta |
 | Família e parallax | src/data/familyScene.js, src/render/parallax.js | Timeline determinística por cena/tempo; faixa cíclica com blend nativo de 6% e fase fracionária. Renderer desenha humanos/animais pelo mesmo método sprite | Média |
-| Shell visual | src/style.css, Game.panel/syncUI, index.html | Estágio 16:9; paisagem de toque/fullscreen usa maior retângulo possível com controles/toolbar sobrepostos; retrato normal usa controles abaixo; menus roláveis e safe areas | Média |
-| Chefes | src/entities/Boss.js, Game.hitBoss/update | Cinco perfis com aviso/investida/recuperação, hit cooldown e arena; Game coordena pisão, latido, superpum, dano e bloqueio de saída | Alta |
+| Shell visual | src/style.css, Game.panel/syncUI, index.html | Estágio 16:9; paisagem de toque/fullscreen usa maior retângulo possível com controles/toolbar sobrepostos; retrato normal usa controles abaixo; grupos por polegar com corrida acima das direções à esquerda e patada/mordida acima de latido/salto à direita, alvos a partir de 56 px e espaço de 16 px; menus roláveis e safe areas | Média |
+| Rivais comuns | src/entities/Rival.js, levels.js, Game.melee/update | Vida 2–3 HP, patrulha, aviso, investida limitada ao trecho seguro, atordoamento/recuperação, rendição; retry restaura; sem save de lutas comuns | Alta |
+| Chefes | src/entities/Boss.js, Game.hitBoss/update | Cinco perfis com aviso/investida/recuperação, hit cooldown e arena; Game coordena patada, mordida, pisão, latido, superpum, dano e bloqueio de saída | Alta |
 | Build/distribuição | `scripts/build.mjs`, Vite, `.github/workflows/pages.yml` | Dois caminhos de build produzem `dist`; Vite com base relativa; workflow valida e publica dist no Pages; geração offline usa sintaxe ES modules restrita | Alta para entrega |
 | Servidor | `scripts/serve.mjs` | HTTP nativo Node sem middleware/backend; serve raiz informada e aplica MIME/404 | Alta para HTTP; dispensável no HTML offline |
 | Assets/QA | `scripts/prepare_assets.py`, `scripts/render-qa.mjs` | Pillow normaliza frames; QA troca o contexto Canvas usando harness e grava PNGs | Média |
@@ -232,9 +235,10 @@ Criticidade: **alta** impede iniciar, controlar, salvar ou concluir a aventura; 
 | Continuar | Botão exibido se `started && !completed` | `start(save.data.level, true)` → recria nível → aceita checkpoint apenas se existe no mapa → spawn → write | Retomada no checkpoint ou início | Alta |
 | Input/física | `keydown`/`keyup` + passos do loop | Input mantém conjuntos → Game atualiza plataformas → Beethoven.update → move com ground/platforms → clamp do mundo → estado de animação | Até 120 passos/s lógico | Alta |
 | Corrida direta móvel | Pointer no botão Correr, ação Run | Usa direção explícita se houver seta; caso contrário usa player.face; acelera até 145; soltar/cancelar remove a ação | Um botão basta para deslocar e correr; Shift de teclado continua modificador | Alta |
-| NPCs/dano | Proximidade ou overlap durante play | NPC patrulha/alerta/late/retorna → colisão não acalmada ou hazard chama hurt → reduz HP, aplica impulso/invulnerabilidade | `over` ao zerar; retry por ação do usuário | Alta |
+| NPCs/dano | Proximidade ou overlap durante play | Rival patrulha/alerta/avisa/investe/recupera; golpes atordoam e zerar HP rende → contato durante investida ou hazard chama hurt → reduz HP, aplica impulso/invulnerabilidade | `over` ao zerar; retry por ação do usuário | Alta |
 | Gatos neutros | Factory + passos de play | Passeiam em trecho seguro → observam jogador próximo → afastam-se ao latido, dentro do intervalo de origem | Não causam dano, não são coletáveis e não alteram save | Média |
 | Queda | `player.y > 290` | `hurt(true)` → perde vida mesmo se invulnerável → recoloca no checkpoint se ainda vivo | Recuperação local; game over se HP zerar | Alta |
+| Patada/mordida | J/K ou botões Patada/Morder | Beethoven.strike → preparação/janela ativa → Game.melee usa overlap frontal e Set por golpe → Rival.hit/Boss.hit → recuo/vida/rendição/vitória | Requer novo acionamento; recarga compartilhada; chefes bloqueiam durante investida | Alta |
 | Latido/portão | E, se bark não ativo | Bark 0,4 s → NPCs próximos acalmam; ataque frontal atinge chefe a menos de 110 px fora da investida → no último portão inicia ending se chefe vencido | Latido serve ao combate e à interação final | Alta |
 | Coleta | Proximidade entre corpo e osso | ID não coletado → adiciona ao Set → salva lista → efeito sonoro → seis partículas | Ossos persistem entre tentativas e fases | Média; itens opcionais |
 | Checkpoint | Jogador no chão a menos de 27 px da bandeira e posição maior que checkpoint | Atualiza checkpoint em memória/storage → HP=3 → sfx + hint | Não regride checkpoint na mesma fase | Alta |
@@ -259,7 +263,7 @@ Criticidade: **alta** impede iniciar, controlar, salvar ou concluir a aventura; 
 - Velocidades horizontais máximas: 95 andando, 145 correndo e 180 correndo com poder; voo limita o topo do corpo a y=35, usa propulsão/gravidade próprias enquanto o salto está segurado; gravidade 850; impulso de pulo -335; velocidade vertical limitada em 480. Coyote e buffer: 0,1 s. Soltar pulo cedo reduz a subida.
 - Plataformas `oneWay` não bloqueiam o eixo horizontal e só recebem aterrissagem de cima; `dx` transporta o corpo em plataforma móvel. Cenários não são colisores.
 - Piso escorregadio é selecionado por intervalo em X, sem checagem da altura do jogador. Não há rampas físicas nem colisão jogador/NPC como sólido; NPC é fonte de dano.
-- NPCs são objetos de dados com estados `patrol`, `alert`, `bark`, `return`; a lógica fica em Game. Invulnerabilidade após dano dura 1,8 s.
+- Cães são instâncias Rival com estados `patrol`, `alert`, `windup`, `charge`, `recover`, `stunned`, `return`, `defeated`; Rival.update mantém IA e limites, Game resolve golpes/contato. Invulnerabilidade após dano dura 1,8 s.
 - Câmera usa posição X, antecipação de 28 px na direção e interpolação; limites do mundo usam viewport 480. Partículas mantidas em até 60; chuva desenha até 65 traços por frame.
 - M e F2 são processados antes dos retornos de cena. Pausa interrompe gameplay e emissão musical; sons já iniciados não têm um sistema específico de pause.
 - Não há jobs agendados, filas ou processos de negócio em background. RAF, síntese de áudio, promises de imagens e esperas do E2E são as operações assíncronas existentes.
@@ -284,7 +288,7 @@ Vite possui seus servidores de desenvolvimento/preview configurados em `vite.con
 
 ### API de diagnóstico do navegador
 
-`window.beethoven.snapshot()` em [src/main.js](src/main.js) devolve mode, level, posição/velocidade, HP, chão, animação, bark, ossos, checkpoint, falhas de assets, resolução física do canvas, resumo dos **três primeiros** cães (inclui breed) e gatos (coat/estado/posição). Inclui power/flying, frangos, face e estado/vida/tempo/posição do chefe. É somente leitura, usado pelo E2E; não oferece teletransporte e não é API remota.
+`window.beethoven.snapshot()` em [src/main.js](src/main.js) devolve mode, level, posição/velocidade, HP, chão, animação, bark, ossos, checkpoint, falhas de assets, resolução física do canvas, resumo dos **três primeiros** cães (inclui breed) e gatos (coat/estado/posição). Inclui power/flying, frangos, face, ataque/recarga, vida/derrota/tempo dos rivais e estado/vida/tempo/posição do chefe. É somente leitura, usado pelo E2E; não oferece teletransporte e não é API remota.
 
 `window.BEETHOVEN_ASSETS` é um manifesto opcional de imagens data URI gerado pelo build offline e consultado por Renderer. Os exports de instâncias de `main.js` são interfaces internas de harness/QA, não contratos de biblioteca versionados.
 
@@ -302,7 +306,7 @@ Vite possui seus servidores de desenvolvimento/preview configurados em `vite.con
 | `npm run typecheck` | tsc --noEmit, escopo limitado ao bootstrap TS |
 | `npm test` | test:unit → test:logic; precisa de dist para production.test |
 | `npm run test:unit` | Vitest; dois casos compartilhados |
-| `npm run test:logic` | 24 casos Node com isolamento de arquivos desativado e VM experimental |
+| `npm run test:logic` | 32 casos Node com isolamento de arquivos desativado e VM experimental |
 | `npm run test:e2e` | Script Playwright independente |
 | `npm run test:visual` | Chromium desktop/4K, layout de celular, multitoque, cancelamento, save/pausa e orientação; relatório visual-mobile-report.json |
 | `npm run test:story` | Chromium: atlas humanos, alturas equivalentes, pixels de emenda/limite nos cinco cenários e capturas de cenas da abertura; story-assets-report.json |
@@ -320,7 +324,7 @@ Outras interfaces: `python3 scripts/prepare_assets.py`, `node scripts/render-qa.
 | `makeLevel(index)` em `levels.js` | Obter arrays mutáveis novos por partida; não reutilizar a instância global `levels` como estado de gameplay |
 | `fresh()`, `validate()` e `Save` | Único schema e política de persistência; não criar outra chave/schema sem coordenar versão |
 | `Input.has/hit` | Diferenciar tecla segurada de acionamento único; consumir pressed com `end()` |
-| `AudioSystem.sfx/tone` | Efeitos e notas sem assets externos; efeitos reconhecidos: jump, bone, bark, hurt, checkpoint, land, step, interact, chicken, fart, bossHit, victory |
+| `AudioSystem.sfx/tone` | Efeitos e notas sem assets externos; efeitos reconhecidos: jump, bone, bark, hurt, checkpoint, land, step, interact, chicken, fart, bossHit, victory, paw, bite |
 | `Renderer.sprite/animal/dog/human` | Recortes e escala compartilhados por animais e donos; humanos seguem descrição, sem referência fotográfica |
 | `Renderer.rect/text/bone/gate` | Primitivas compartilhadas por fases e cutscenes |
 | `Game.panel/hint` | Painéis DOM e mensagens temporárias; labels dos botões também utilizados nos testes |
@@ -353,8 +357,8 @@ LocalStorage, chave **`beethoven.save.v1`** em [src/systems/Save.js](src/systems
 |---|---|
 | Level | `{index,name,subtitle,bg,width,weather,story,platforms,hazards,dogs,cats,bones,chickens,boss,checkpoints,slippery,ground,gaps,start,end}` retornado por `makeLevel` |
 | Corpo/plataforma | `x,y,w,h`, opcionais `oneWay`, `moving`, `origin`, `phase`, `dx`; move usa coordenadas do topo esquerdo |
-| Jogador | posição/velocidade, w/h, face, grounded, hp, inv, coyote, buffer, bark, land, state, time, step; power (20 s), launch, flying, burst e boostCooldown |
-| NPC | corpo, breed (pitbull/shepherd/pinscher/rottweiler), origin, range, vx, state, calm; atualizados em Game.update, colisão original preservada |
+| Jogador | posição/velocidade, w/h, face, grounded, hp, inv, coyote, buffer, bark, land, state, time, step; power (20 s), launch, flying, burst e boostCooldown; attack {kind,elapsed,face,hits:Set}, attackCooldown |
+| NPC rival | Rival: corpo, breed, origin/range/speed/vx/face, state/calm/timer, hp/maxHp/inv/defeated; update/hit/soothe/reset; contato de investida causa dano |
 | Gato | coat (tabby/tuxedo), x, y nos pés, origin, range, vx, state (stroll/watch/startled), flee; sem hitbox/dano/save |
 | Hazard | corpo, type (`glass`, `thorns`, `spikes`), estático; colisão AABB tira um coração respeitando invulnerabilidade |
 | Frango | id, x/y/w/h, eaten/revealed; dois por fase, escondidos entre folhas em plataformas; comer ativa power, retry repõe |
@@ -469,14 +473,27 @@ Perfis/permissões do Codex, instalação de Docker no host e permissões do soc
 | [tests/harness.mjs](tests/harness.mjs) | DOM/Image/Canvas/RAF e LocalStorage substitutos; importa main.js, exporta instâncias e tick/draw; não simula browser completo |
 | [tests/e2e.mjs](tests/e2e.mjs) | Chromium real: menu/assets, intro/skip, movimento/corrida, pulo/chão, mute/pause, reload/continuar, reset; E2E_FULL inclui cinco fases/final. Reinício aguarda intro/play; mute aguarda o rótulo após KeyM, sincronizando leituras com o loop de simulação |
 | [tests/power-boss.test.mjs](tests/power-boss.test.mjs) | 9 casos Node: distribuição, poder/pausa/expiração, hazards, ciclo do chefe, dano, saída bloqueada e retry/save |
-| [tests/combat-browser.mjs](tests/combat-browser.mjs) | Fixture interceptada do HTML offline: coleta por salto, voo/pausa/expiração, cinco chefes por teclas sem poder e multitoque. Posições escolhidas na fixture; sem API mutável em produção |
+| [tests/melee.test.mjs](tests/melee.test.mjs) | 8 casos Node: preparação/alcance/direção/altura, acerto único por golpe, recarga, dano/rendição, IA/contato, patada/mordida nos cinco chefes, pausa/retry/save e reforço da camisa; gatos neutros preservados |
+| [tests/combat-browser.mjs](tests/combat-browser.mjs) | 5 checks em fixture interceptada do HTML offline: J/K reais vencem rival e atingem os cinco chefes; coleta por salto/voo/pausa/expiração; cinco vitórias por teclas sem poder; multitoque de voo/HUD; Run+Patada/cancelamento e Morder móvel. Posições escolhidas na fixture; sem API mutável em produção |
 | [tests/pages.mjs](tests/pages.mjs) | Chromium desktop/móvel em /beethoven/ com raiz retornando 404; nove imagens HD, início/movimento, link inicial, corrida por toque/rotação e HTML offline. Requer dist e Chromium; gera pages-report.json |
 | [scripts/render-qa.mjs](scripts/render-qa.mjs) | QA visual manual em Canvas nativo; não é runner de testes, não mede FPS nem verifica browser |
-| [tests/visual-mobile.mjs](tests/visual-mobile.mjs) | 9 checks Chromium: qualidade 4K; fullscreen nativo desktop/saída externa; menus/toque/cancelamento/save; paisagem ocupa >95% do maior 16:9; orientação CDP/barras 390→320→390; fullscreen móvel com rotação; fallback recusado em fixture. Capturas incluem mobile-fullscreen.png; sem execução física/Safari |
+| [tests/visual-mobile.mjs](tests/visual-mobile.mjs) | 9 checks Chromium: qualidade 4K; fullscreen nativo desktop/saída externa; menus/toque/cancelamento/save; alvos ≥56 px, espaços ≥16 px, grupos separados ≥24 px e salto maior em retrato/paisagem (inclui 320×568 e 568×320); paisagem ocupa >95% do maior 16:9; orientação CDP/barras 390→320→390; fullscreen móvel com rotação; fallback recusado em fixture. Capturas incluem mobile-fullscreen.png; sem execução física/Safari |
 | [tests/story-render.test.mjs](tests/story-render.test.mjs) | 3 casos Node: Run sozinho/sentido/soltura, timeline de passeio/guia/fuga e fase periódica para câmera negativa/distante |
 | [tests/parallax-family.mjs](tests/parallax-family.mjs) | 3 checks Chromium: quarto atlas/alturas humanas, comparação de pixels de emenda e limite temporal em cinco fundos, capturas da abertura em fixture offline temporal. E2E_BASE_URL usa o HTML offline do serviço, não dist antigo do container |
 
-### Estado atual — superfrango, perigos e chefes, 2026-11-04
+### Estado atual — patadas, mordidas e rivais, 2026-11-08
+
+- Build/typecheck, dois Vitest e 32 Node aprovados, incluindo oito novos casos de combate próximo. Travessia simulada completa: 337 s, 72 ossos, zero retries.
+- Chromium: sete E2E curtos, nove checks visuais/móveis/fullscreen, cinco checks de combate e três Pages aprovados. J/K testados contra os cinco chefes e rival; multitoque Run+Patada, cancelamento e Morder por toque; controles ≥56 px/espaços ≥16 px em telas a partir de 320×568. Capturas inspecionadas; nenhum pageerror.
+- Combate usa animações Canvas sobre atlas existentes; gatos/família continuam neutros. Resultados em e2e-report.json, visual-mobile-report.json, combat-report.json e pages-report.json. Sem nova travessia integral no browser ou validação física/Safari.
+
+### Histórico — ergonomia móvel, 2026-11-08
+
+- Typecheck e builds Vite/offline aprovados. Dois Vitest e 24 Node aprovados; travessia simulada das cinco fases em 337 s lógicos, 73 ossos e zero retries.
+- Nove checks Chromium de layout/multitoque/rotação/fullscreen aprovados. Novas verificações exigem alvos ≥56 px, distância ≥16 px entre comandos e até a toolbar, separação ≥24 px entre grupos e salto maior; incluem telas 320×568 e 568×320. Capturas retrato/paisagem inspecionadas; nenhum pageerror. Relatório: test-results/visual-mobile-report.json.
+- dist local atualizado com o build web/offline validado. Sem deploy, nova execução de combate/Pages/E2E integral, teste físico ou Safari nesta tarefa.
+
+### Histórico — superfrango, perigos e chefes, 2026-11-04
 
 - Typecheck/build web/offline, dois Vitest e 24 Node aprovados. Travessia simulada completa com combate por inputs: 337 s lógicos, 73 ossos e zero retries.
 - Sete E2E curtos, nove checks móveis/visuais/fullscreen e três de família/parallax aprovados no build atual. Três checks de combate Chromium aprovados: poderes, cinco chefes sem frango, multitoque/barra móvel sem sobreposição. Três checks Pages aprovados; sem resultado remoto de CI/Pages declarado.
@@ -583,7 +600,7 @@ A .dockerignore exclui Git/configurações protegidas, node_modules, dist/result
 | Média | Bundler offline artesanal por regex, assume grafo e sintaxes específicas; troca do HTML depende de string exata | scripts/build.mjs; testar os dois caminhos após mudar imports/entrada |
 | Média | Testes Node alteram globais e compartilham instâncias/tempo; isolamento entre arquivos foi desativado; harness não reproduz eventos/Canvas/browser completos | package.json, tests/harness.mjs, flow/production/save tests |
 | Média | Save grava sincronamente a cada osso; falha é silenciosa; não migra versões anteriores e não persiste HP/tempo/posição exata | Save.js e pontos de write em main.js |
-| Média | `retry()` restaura jogador/chefe invicto/frangos, mas preserva outros NPCs/tempo de fase; não há rotina explícita de teardown dos sistemas/listeners nem tratamento central de erros de loop | Game.retry, Input.constructor, frame |
+| Média | `retry()` restaura jogador/rivais/chefe invicto/frangos, mas preserva gatos/tempo de fase; não há rotina explícita de teardown dos sistemas/listeners nem tratamento central de erros de loop | Game.retry, Input.constructor, frame |
 | Média | Corpo usa y no topo, enquanto docs/ARCHITECTURE.md descreve posição como pés; seguir a implementação para não deslocar colisores | Beethoven.constructor, physics.move, Renderer.level |
 | Média | Beethoven reaproveita 12 poses HD; raça rival/gato tem quatro e dono tem seis poses. Primitivas ainda simplificadas; duração humana de 15–25 min não demonstrada | Beethoven.frame, Renderer, levels, docs/ASSETS.md |
 | Média | Cenários compostos repetidos, padrões de fase semelhantes; nuvens/mobiliário fornecem camadas, não fundos originais separados | Renderer.background/level, levels.js |
@@ -597,6 +614,21 @@ A .dockerignore exclui Git/configurações protegidas, node_modules, dist/result
 Os débitos de arquitetura/arte continuam documentados; a tarefa de disponibilização corrigiu a sincronização do teste de reinício e iniciou o serviço local. Nenhum valor de secret/credencial foi copiado para o documento.
 
 ## Última Atualização
+
+### Patadas, mordidas e lutas com rivais — 2026-11-08, America/Sao_Paulo
+
+- **Combate:** Beethoven.strike/attackBox e attacks definem patada (1 dano, alcance 34, recarga 0,42 s) e mordida (2 danos, alcance 24, recarga 0,7 s). Preparação/janela ativa, direção travada, recarga compartilhada, um acerto por alvo por golpe e novo acionamento obrigatório. Game.melee aplica overlap frontal antes do contato e reutiliza Boss.hit/save; chefes bloqueiam golpes durante investidas. Camisa adiciona 1 dano. Pausa congela animação/recarga; retry cria jogador sem golpes pendentes.
+- **Rivais:** novo src/entities/Rival.js, instanciado por levels.js, mantém vida 2–3 HP, patrulha/alerta, aviso de 0,55 s, investida limitada ao trecho seguro, recuperação, atordoamento e rendição sem dano de contato. Retry restaura origem/vida/IA; recarga recria lutas comuns, sem mudar schema do save. Latido/superpum usam soothe, sem reativar rendidos. Gatos de cenário e família permanecem neutros.
+- **Interface/arte/áudio:** J/Patada e K/Morder, acessibilidade/ajuda de teclado e menu atualizados. Controles móveis mantêm dois grupos: corrida/direções à esquerda, patada/mordida acima de latido/salto à direita; alvos ≥56 px, espaços ≥16 px e salto maior. Recarga visual não desabilita captura de ponteiro. Hover/foco preservam contraste. Renderer.player combina poses existentes com animações Canvas de pata/mandíbula; Renderer.rival mostra vida, aviso, impacto e rendição. Sons paw/bite sintetizados, sem PNGs ou dependências novas.
+- **Contratos/documentação:** snapshot somente leitura inclui attack/attackCooldown e vida/derrota/tempo dos três primeiros rivais. README, GAME_DESIGN e TEST_REPORT atualizados. Módulos/fluxos/dados/testes deste mapa descrevem o novo combate e o reset de rivais.
+- **Validação:** typecheck/build Vite/offline, dois Vitest e 32 Node aprovados (oito casos novos em tests/melee.test.mjs). Travessia simulada: 337 s, 72 ossos e zero retries. Sete E2E curtos, nove checks visuais/móveis, cinco checks de combate e três Pages aprovados; nenhum pageerror. J/K reais atingiram os cinco chefes e venceram rival; Run+Patada/cancelamento e Morder por toque validados. Regressão venceu os cinco chefes sem poder/retries (8/8/10/10/12 s). Capturas de golpes, rival e controles inspecionadas. Após ajuste final de contraste, build e nove checks visuais móveis aprovados novamente. Dist local atualizado com o build final.
+- **Limites:** sem deploy remoto/local, travessia integral em navegador, nova execução de família/parallax, aparelho físico/Safari, benchmark ou audição. Animações de combate reutilizam atlas com efeitos Canvas; não são novas poses ilustradas exclusivas.
+
+### Ergonomia dos controles móveis — 2026-11-08, America/Sao_Paulo
+
+- **Interface:** index.html identifica os grupos Movimento/Ações. src/style.css substitui a fileira compacta por dois grupos em grade: Correr acima das direções, Latir acima e para dentro de Pular/Voar. Botões têm pelo menos 56×56 px, salto circular maior (72–84 px), espaçamento de 16 px e separação entre polegares de pelo menos 24 px. Direções, corrida e ações têm formas distintas; fullscreen/paisagem preservam safe areas e afastam os controles das bordas. Em retrato, a barra de pausa/som/tela cheia também fica a 16 px dos controles de jogo.
+- **Contratos:** ações data-key, rótulo dinâmico Pular/Voar e Input multitoque existentes reutilizados. Sem alteração de física, persistência ou dependências.
+- **Validação:** typecheck/build web/offline, dois Vitest e 24 Node aprovados. Nove checks Chromium aprovados, incluindo distância até a toolbar, multitoque/cancelamento, telas 320×568 e 568×320, rotação, fullscreen e fallback; sem pageerror. Capturas retrato/paisagem inspecionadas; dist local atualizado. A imagem de testes Docker existente precisou receber package.json, scripts, configuração Vite e assets atuais antes da validação válida. Sem deploy ou teste físico/Safari; ergonomia em aparelho real ainda não verificada.
 
 ### Superfrango, perigos e chefes concluídos — 2026-11-04, America/Sao_Paulo
 

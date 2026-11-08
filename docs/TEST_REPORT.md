@@ -1,5 +1,13 @@
 # Relatório de testes
 
+## Patadas, mordidas e rivais — 08/11/2026
+
+- **Build:** typecheck, Vite e HTML autocontido aprovados, sem novas dependências ou imagens.
+- **Lógica:** dois Vitest e 32 Node aprovados. Oito novos casos em melee.test.mjs verificam preparação/alcance/direção/altura, acerto único, recarga, dano/rendição, IA dos rivais, os cinco chefes, pausa/retry/save e camisa. Travessia integral por física/inputs: 337 s lógicos, 72 ossos e zero retries.
+- **Browser:** sete E2E curtos, nove checks visuais/móveis/fullscreen, cinco checks de combate e três Pages aprovados; nenhum pageerror. Controles móveis incluem Patada/Morder sem reduzir alvos de 56 px ou espaços de 16 px, inclusive em 320×568 e 568×320. Fixture de combate usa J/K reais para vencer rival e ferir os cinco chefes; testa Run+Patada por multitoque/cancelamento e Morder por toque. Regressão venceu todos os chefes sem poder e sem retries (8/8/10/10/12 s).
+- **Evidências:** relatórios e2e-report.json, visual-mobile-report.json, combat-report.json e pages-report.json em test-results. Capturas paw-rival.png, bite-boss.png, mobile-melee.png e retrato/paisagem inspecionadas. Após revisão visual, o contraste de foco dos botões coloridos foi corrigido; build e nove checks visuais móveis passaram novamente. Dist local atualizado com o build final.
+- **Limites:** sem deploy, teste físico/Safari, benchmark/audição, nova execução de família/parallax ou travessia integral em navegador. Animações reutilizam atlas com efeitos Canvas; lutas comuns reiniciam no retry/reload, vitórias de chefes permanecem salvas.
+
 ## Superfrango, perigos e chefes — 04/11/2026
 
 - **Build final aprovado:** typecheck, Vite web e HTML autocontido. Onze PNGs de execução (cinco fundos e seis atlas); recortes alpha dos dois atlas novos conferidos. Originais preservados.

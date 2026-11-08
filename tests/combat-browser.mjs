@@ -27,6 +27,21 @@ try{
   await page.goto(url+'/__combat_qa');await page.waitForFunction(()=>window.__combatQA);return page;
  }
  const page=await fixture(context),snapshot=()=>page.evaluate(()=>window.beethoven.snapshot());
+ await check('Teclado: patada e mordida vencem rival e atingem os cinco chefes',async()=>{
+  await page.evaluate(()=>{const {game,save}=window.__combatQA;save.reset();game.start(0);const d=game.level.dogs[0];game.player.x=d.x-35;game.player.grounded=true;game.cam=game.player.x-180});
+  await page.keyboard.press('KeyJ');await page.waitForFunction(()=>window.beethoven.snapshot().npcs[0].hp===2);
+  await page.locator('#stage').screenshot({path:'test-results/paw-rival.png'});report.screens.push('paw-rival.png');
+  await page.waitForFunction(()=>window.beethoven.snapshot().attackCooldown===0);
+  await page.evaluate(()=>{const {game}=window.__combatQA;game.player.x=game.level.dogs[0].x-35});
+  await page.keyboard.press('KeyK');await page.waitForFunction(()=>window.beethoven.snapshot().npcs[0].defeated);assert.equal((await snapshot()).hp,3);
+  for(let index=0;index<5;index++){
+   await page.evaluate(index=>{const {game,save}=window.__combatQA;save.reset();game.start(index);const b=game.level.boss;b.active=true;b.state='recover';b.timer=5;game.player.x=b.x-35;game.player.grounded=true;game.cam=game.player.x-180},index);
+   const hp=(await snapshot()).boss.maxHp;await page.keyboard.press('KeyJ');await page.waitForFunction(hp=>window.beethoven.snapshot().boss.hp===hp-1,hp);
+   await page.waitForFunction(()=>window.beethoven.snapshot().attackCooldown===0&&window.__combatQA.game.level.boss.inv===0);
+   await page.keyboard.press('KeyK');await page.waitForFunction(hp=>window.beethoven.snapshot().boss.hp===hp-3,hp);
+   if(index===2){await page.locator('#stage').screenshot({path:'test-results/bite-boss.png'});report.screens.push('bite-boss.png')}
+  }
+ });
  await check('Frango alcançável por salto: camisa, voo, pausa e expiração no browser',async()=>{
   await page.evaluate(()=>{const {game,save}=window.__combatQA;save.reset();game.start(0);const c=game.level.chickens[0];game.player.x=c.x-50;game.player.y=199;game.player.grounded=true;game.cam=game.player.x-180});
   await page.keyboard.down('KeyD');await page.keyboard.down('Shift');await page.keyboard.down('Space');
@@ -87,6 +102,21 @@ try{
   });
   assert(hud.top>hud.toolbarBottom,'Barra do chefe deve ficar abaixo dos botões de pausa/som/fullscreen');
   await phone.screenshot({path:'test-results/mobile-boss-hud.png'});report.screens.push('mobile-boss-hud.png');await mobile.close();
+ });
+ await check('Celular: correr e dar patada com multitoque, depois vencer rival com Morder',async()=>{
+  const mobile=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:2,isMobile:true,hasTouch:true}),phone=await fixture(mobile);
+  await phone.evaluate(()=>{const {game,save}=window.__combatQA;save.reset();game.start(0);game.player.x=game.level.dogs[0].x-35;game.player.grounded=true;game.cam=game.player.x-180});
+  const cdp=await mobile.newCDPSession(phone),points=[];
+  for(const [id,key]of [[1,'Run'],[2,'KeyJ']]){const r=await phone.locator(`[data-key="${key}"]`).boundingBox();points.push({id,x:r.x+r.width/2,y:r.y+r.height/2})}
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:points});
+  await phone.waitForFunction(()=>window.beethoven.snapshot().npcs[0].hp===2);
+  assert(await phone.locator('[data-key="KeyJ"]').evaluate(b=>b.classList.contains('is-recovering')));
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchCancel',touchPoints:[]});
+  await phone.waitForFunction(()=>window.beethoven.snapshot().attackCooldown===0&&Math.abs(window.beethoven.snapshot().vx)<5);
+  await phone.evaluate(()=>{const {game}=window.__combatQA;game.player.x=game.level.dogs[0].x-35;game.player.face=1});
+  await phone.getByRole('button',{name:'Morder',exact:true}).tap();await phone.waitForFunction(()=>window.beethoven.snapshot().npcs[0].defeated);
+  assert.equal((await phone.evaluate(()=>window.beethoven.snapshot())).hp,3);
+  await phone.screenshot({path:'test-results/mobile-melee.png'});report.screens.push('mobile-melee.png');await mobile.close();
  });
  assert.deepEqual(report.errors,[]);report.status='passed';
 }catch(error){report.status='failed';report.failure=error.stack||String(error);console.error(error);process.exitCode=1}

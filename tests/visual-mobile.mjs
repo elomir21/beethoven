@@ -51,8 +51,23 @@ try{
   const layout=await phone.evaluate(()=>({width:visualViewport.width,height:visualViewport.height,scroll:document.documentElement.scrollWidth,buttons:[...document.querySelectorAll('[data-key],#pause,#mute,#fullscreen')].map(b=>{const r=b.getBoundingClientRect();return {id:b.id||b.dataset.key,x:r.x,y:r.y,w:r.width,h:r.height}})}));
   assert(layout.scroll<=layout.width+1,'Overflow horizontal');
   for(const r of layout.buttons){assert(r.w>=44&&r.h>=40);assert(r.x>=0&&r.x+r.w<=layout.width+1);assert(r.y>=0&&r.y+r.h<=layout.height+1,'Controle fora da tela: '+JSON.stringify({button:r,viewport:[layout.width,layout.height]}))}
+  const controls=layout.buttons.filter(r=>['KeyA','KeyD','Run','KeyE','KeyJ','KeyK','Space'].includes(r.id));assert.equal(controls.length,7);
+  for(const r of controls)assert(r.w>=56&&r.h>=56,'Alvo de toque pequeno: '+r.id);
+  for(let i=0;i<controls.length;i++)for(const b of controls.slice(i+1)){
+   const a=controls[i],dx=Math.max(0,a.x-b.x-b.w,b.x-a.x-a.w),dy=Math.max(0,a.y-b.y-b.h,b.y-a.y-a.h);
+   assert(Math.hypot(dx,dy)>=15.9,'Controles próximos: '+JSON.stringify({a,b}));
+  }
+  for(const a of controls)for(const b of layout.buttons.filter(r=>!controls.includes(r))){
+   const dx=Math.max(0,a.x-b.x-b.w,b.x-a.x-a.w),dy=Math.max(0,a.y-b.y-b.h,b.y-a.y-a.h);
+   assert(Math.hypot(dx,dy)>=15.9,'Controle próximo da barra de pausa/som/tela cheia: '+JSON.stringify({a,b}));
+  }
+  const button=id=>controls.find(r=>r.id===id),left=button('KeyA'),right=button('KeyD'),run=button('Run'),bark=button('KeyE'),paw=button('KeyJ'),bite=button('KeyK'),jump=button('Space');
+  assert(run.y+run.h+16<=left.y+.1&&Math.abs(left.y-right.y)<1,'Corrida deve ficar acima das direções');
+  assert(paw.y+paw.h+16<=bark.y+.1&&bite.y+bite.h+16<=jump.y+.1&&bark.x+bark.w+16<=jump.x+.1,'Ataques devem ficar acima do latido e salto, com espaço entre botões');
+  assert(jump.w>=right.w+15.9&&jump.h>=right.h+15.9,'Salto deve ter um alvo maior');
+  assert(Math.min(paw.x,bark.x,jump.x)-Math.max(run.x+run.w,right.x+right.w)>=23.9,'Grupos dos polegares muito próximos');
  }
- await check('Celular retrato: menu, narrativa por toque, 16:9 e controles visíveis',assertLayout);
+ await check('Celular retrato: alvos de 56 px, espaços de 16 px e grupos por polegar',assertLayout);
  const client=await mobile.newCDPSession(phone);
  async function points(keys){return Promise.all(keys.map(async(key,index)=>{const r=await phone.locator(`[data-key="${key}"]`).boundingBox();assert(r);return {id:index+1,x:r.x+r.width/2,y:r.y+r.height/2,radiusX:3,radiusY:3,force:1}}))}
  const touch=(type,touchPoints)=>client.send('Input.dispatchTouchEvent',{type,touchPoints});
@@ -73,7 +88,7 @@ try{
  });
  await phone.screenshot({path:'test-results/mobile-portrait.png'});report.screens.push('mobile-portrait.png');
  await check('Rotação e telas pequenas: paisagem e retrato sem distorção',async()=>{
-  for(const size of [{width:844,height:390},{width:640,height:360},{width:360,height:640}]){
+  for(const size of [{width:844,height:390},{width:640,height:360},{width:568,height:320},{width:320,height:568},{width:360,height:640}]){
    await phone.setViewportSize(size);await assertLayout();
    if(size.width>size.height){
     await phone.waitForFunction(()=>document.querySelector('#game-shell').dataset.expanded==='true');

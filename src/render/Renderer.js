@@ -3,6 +3,7 @@ import {characterFiles,animalSprites,humanSprites} from '../data/assets.js';
 import {introFamily,walkFrame} from '../data/familyScene.js';
 import {spriteFrames} from '../data/spriteFrames.js';
 import {createParallaxStrip,parallaxPhase} from './parallax.js';
+import {attacks} from '../entities/Beethoven.js';
 const files=levels.map(l=>l.bg);
 export class Renderer {
  constructor(canvas){this.canvas=canvas;this.c=canvas.getContext('2d');this.images={};this.strips={};this.t=0;this.resize();if(typeof ResizeObserver!=='undefined'){this.observer=new ResizeObserver(()=>this.resize());this.observer.observe(canvas)}window.addEventListener('resize',()=>this.resize())}
@@ -14,6 +15,36 @@ export class Renderer {
  sprite(kind,x,y,frame=0,face=1){const spec=animalSprites[kind]||humanSprites[kind],c=this.c,im=this.images[spec.file];if(!im)return;const frames=spriteFrames[spec.file].frames,index=spec.row===undefined?frame:spec.row*spec.columns+frame;const box=frames[index],sequence=spec.row===undefined?frames:frames.slice(spec.row*spec.columns,(spec.row+1)*spec.columns);const scale=Math.min(spec.width/Math.max(...sequence.map(f=>f.w)),spec.height/Math.max(...sequence.map(f=>f.h)));const w=box.w*scale,h=box.h*scale;c.save();c.translate(x,y);c.scale(face,1);c.drawImage(im,box.x,box.y,box.w,box.h,-w/2,-h,w,h);c.restore()}
  animal(kind,x,y,frame=0,face=1){this.sprite(kind,x,y,frame,face)}
  dog(x,y,frame=0,face=1){this.sprite('beethoven',x,y,frame,face)}
+ player(p,t){
+  const c=this.c,a=p.attack,progress=a?a.elapsed/attacks[a.kind].duration:0,swing=Math.sin(progress*Math.PI),face=a?.face||p.face;
+  c.save();c.translate(p.x+p.w/2,p.y+p.h);if(a)c.rotate(face*swing*(a.kind==='paw'?-.12:.12));
+  this.sprite(p.power>0?'beethovenVasco':'beethoven',0,0,p.frame(t),face);c.restore();
+  if(!a)return;
+  c.save();c.translate(p.x+p.w/2,p.y+8);c.scale(face,1);c.lineCap='round';
+  if(a.kind==='paw'){
+   const x=18+swing*22,y=7-swing*7;
+   c.strokeStyle='#855330';c.lineWidth=7;c.beginPath();c.moveTo(9,9);c.lineTo(x,y);c.stroke();
+   c.strokeStyle='#fff2ce';c.lineWidth=5;c.stroke();c.fillStyle='#fff2ce';c.beginPath();c.ellipse(x+2,y,7,5,-.2,0,Math.PI*2);c.fill();
+   for(let i=0;i<3;i++){c.fillStyle='#b58456';c.beginPath();c.arc(x+3+i*2,y-3+i*2,1.3,0,Math.PI*2);c.fill()}
+   c.strokeStyle='#ffe7a4';c.lineWidth=1.5;c.beginPath();c.arc(20,1,10+swing*15,-.9,.6);c.stroke();
+  }else{
+   const x=22+swing*10,opening=3+(1-swing)*7;
+   c.strokeStyle='#ffe3b1';c.lineWidth=4;c.beginPath();c.moveTo(15,-5);c.lineTo(x,-opening);c.lineTo(x+7,-opening+2);c.moveTo(15,4);c.lineTo(x,opening);c.lineTo(x+7,opening-2);c.stroke();
+   c.strokeStyle='#fff';c.lineWidth=2;for(let i=0;i<3;i++){c.beginPath();c.moveTo(x+i*3,-opening+2);c.lineTo(x+i*3,-opening+5);c.moveTo(x+i*3,opening-2);c.lineTo(x+i*3,opening-5);c.stroke()}
+  }
+  c.restore();
+ }
+ rival(d,t){
+  const c=this.c,center=d.x+d.w/2;
+  c.save();if(d.defeated)c.globalAlpha=.6;else if(d.inv>0&&Math.floor(t*18)%2)c.globalAlpha=.45;
+  const frame=d.defeated?0:d.state==='windup'||d.state==='charge'?3:d.state==='stunned'?0:d.state==='patrol'||d.state==='return'?1+Math.floor(t*7)%2:0;
+  this.animal(d.breed,center,d.y+d.h,frame,d.face);c.restore();
+  if(d.defeated){this.text('✓',center,d.y-7,'#cce49a',10,'center');return}
+  if(d.state==='windup'){this.text('!',center,d.y-12,'#ffe29a',11,'center');this.rect(d.face>0?center:center-40,220,40,2,'#e79b5a99')}
+  if(d.state==='stunned')this.text('✦',center,d.y-10,'#ffe7a4',10,'center');
+  if(d.calm>0)this.text('♪',center,d.y-10,'#b8f2c7',9,'center');
+  if(d.hp<d.maxHp||['windup','charge','recover'].includes(d.state)){this.rect(center-15,d.y-5,30,3,'#563e43');this.rect(center-15,d.y-5,30*d.hp/d.maxHp,3,'#edba7f')}
+ }
  human(x,y,variant=0,walk=0,face=1){this.sprite(variant?'julia':'elomir',x,y,walk?walkFrame(walk,1):0,face)}
  bone(x,y,t){const c=this.c;c.save();c.translate(Math.round(x),Math.round(y+Math.sin(t*3+x)*2));this.rect(-5,-1,10,3,'#fff1bc');for(const [a,b]of[[-6,-3],[-6,1],[4,-3],[4,1]])this.rect(a,b,3,3,'#fff1bc');c.restore()}
  hazard(h){
@@ -77,11 +108,11 @@ export class Renderer {
  for(const chicken of l.chickens)if(chicken.x>cam-30&&chicken.x<cam+510)this.chicken(chicken,t);
  for(const h of l.hazards)this.hazard(h);
  for(const cat of l.cats){if(cat.x<cam-60||cat.x>cam+540)continue;this.animal(cat.coat,cat.x,cat.y,cat.state==='watch'?3:1+Math.floor(t*(cat.flee>0?12:5))%2,cat.vx<0?-1:1);if(cat.flee>0)this.text('!',cat.x,cat.y-29,'#f1d4a0',8,'center')}
- for(const d of l.dogs){if(d.x<cam-70||d.x>cam+550)continue;this.animal(d.breed,d.x+14,d.y+23,d.state==='bark'?3:d.state==='patrol'||d.state==='return'?1+Math.floor(t*7)%2:0,d.vx<0?-1:1);if(d.state==='bark')this.text('Au!',d.x+10,d.y-8,'#ffe4a4',8);if(d.calm>0)this.text('♪',d.x+10,d.y-8,'#b8f2c7',9)}
+ for(const d of l.dogs){if(d.x<cam-70||d.x>cam+550)continue;this.rival(d,t)}
  if(l.index===4)this.gate(l.end+38);else{this.rect(l.end+18,182,3,40,'#345d55');this.rect(l.end+4,181,60,13,'#ead2a0');this.text('CAMINHO →',l.end+34,190,'#355651',7,'center')}
  if(l.boss.x>cam-100&&l.boss.x<cam+580)this.boss(l.boss,t);
  if(l.boss.active&&!l.boss.defeated){for(const x of [l.boss.left,l.boss.right]){this.rect(x,148,2,74,'#d9a46188');this.text('⚑',x,145,'#f5c987',10,'center')}}
- if(!(p.inv>0&&Math.floor(t*14)%2))this.sprite(p.power>0?'beethovenVasco':'beethoven',p.x+p.w/2,p.y+p.h,p.frame(t),p.face);
+ if(!(p.inv>0&&Math.floor(t*14)%2))this.player(p,t);
  if(p.bark>0){c.strokeStyle='#fff1b9';c.beginPath();c.arc(p.x+13+p.face*23,p.y+8,10+(1-p.bark/.4)*13,-1,1);c.stroke()}
  for(const f of g.particles){if(f.gas){c.save();c.globalAlpha=Math.min(1,f.life*2);c.fillStyle=f.color;c.beginPath();c.ellipse(f.x,f.y,f.size+(1-f.life)*8,f.size+(1-f.life)*5,0,0,Math.PI*2);c.fill();c.restore()}else this.rect(f.x,f.y,2,2,f.color)}
  if(g.debug){c.strokeStyle='red';for(const s of [...l.ground,...l.platforms,p])c.strokeRect(s.x,s.y,s.w,s.h)}c.restore();
