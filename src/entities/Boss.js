@@ -15,7 +15,7 @@ export class Boss {
   this.w=this.kind==='rat'?64:52;this.h=this.kind==='rat'?43:42;
   this.left=end-510;this.right=end-45;this.trigger=end-490;
   this.x=end-180;this.y=222-this.h;this.vy=0;this.face=-1;
-  this.active=false;this.defeated=false;this.state='idle';this.timer=0;this.inv=0;
+  this.active=false;this.defeated=false;this.state='idle';this.timer=0;this.inv=0;this.nextAttack='paw';this.attackDuration=0;
  }
  reset(){Object.assign(this,new Boss(this.index,this.end))}
  update(dt,player){
@@ -30,11 +30,19 @@ export class Boss {
    this.state='charge';this.timer=.72;this.vy=-this.leap;
   }else if(this.state==='charge'){
    this.x+=this.face*this.speed*dt;
-   if(this.timer<=0||this.x<=this.left+8||this.x+this.w>=this.right){this.state='recover';this.timer=1.5}
-  }else if(this.state==='recover'&&this.timer<=0){this.state='prowl';this.timer=.65}
+   if(this.timer<=0||this.x<=this.left+8||this.x+this.w>=this.right){this.state=this.nextAttack;this.nextAttack=this.nextAttack==='paw'?'bite':'paw';this.attackDuration=this.state==='paw'?.5:.6;this.timer=this.attackDuration;this.face=player.x+player.w/2<this.x+this.w/2?-1:1;this.vy=0}
+  }else if((this.state==='paw'||this.state==='bite')&&this.timer<=0){this.state='recover';this.timer=1.5}
+  else if(this.state==='recover'&&this.timer<=0){this.state='prowl';this.timer=.65}
   this.x=clamp(this.x,this.left+8,this.right-this.w);
   this.vy+=850*dt;this.y=Math.min(222-this.h,this.y+this.vy*dt);
   if(this.y>=222-this.h)this.vy=0;
+ }
+ attackBox(){
+  if(!this.active||this.defeated||!['paw','bite'].includes(this.state))return null;
+  const elapsed=this.attackDuration-this.timer;
+  if(elapsed<.15||this.timer<.12)return null;
+  const reach=this.state==='paw'?42:30;
+  return {x:this.face>0?this.x+this.w-5:this.x-reach,y:this.y+8,w:reach+5,h:this.h-4};
  }
  hit(damage=1){
   if(!this.active||this.defeated||this.inv>0)return false;

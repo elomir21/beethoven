@@ -162,6 +162,7 @@ Não há ORM, framework de UI, banco, cache remoto, SDK cloud ou dependência de
 │   ├── parallax-family.mjs         Pixels de emenda e abertura em Chromium
 │   ├── visual-mobile.mjs           Qualidade 4K, layout e multitoque em browser
 │   ├── pages.mjs                   Build em /beethoven/, assets, toque/rotação e HTML offline
+│   ├── improvements.test.mjs        Regressões de arco, placa e avisos Canvas
 │   ├── power-boss.test.mjs          Poder, dano, arenas, combate, retry e save
 │   ├── melee.test.mjs               Patadas/mordidas, alcance, rivais, chefes e ciclo de vida
 │   └── combat-browser.mjs          Voo/pausa/expiração, cinco lutas e multitoque
@@ -207,7 +208,7 @@ Criticidade: **alta** impede iniciar, controlar, salvar ou concluir a aventura; 
 | Família e parallax | src/data/familyScene.js, src/render/parallax.js | Timeline determinística por cena/tempo; faixa cíclica com blend nativo de 6% e fase fracionária. Renderer desenha humanos/animais pelo mesmo método sprite | Média |
 | Shell visual | src/style.css, Game.panel/syncUI, index.html | Estágio 16:9; paisagem de toque/fullscreen usa maior retângulo possível com controles/toolbar sobrepostos; retrato normal usa controles abaixo; grupos por polegar com corrida acima das direções à esquerda e patada/mordida acima de latido/salto à direita, alvos a partir de 56 px e espaço de 16 px; menus roláveis e safe areas | Média |
 | Rivais comuns | src/entities/Rival.js, levels.js, Game.melee/update | Vida 2–3 HP, patrulha, aviso, investida limitada ao trecho seguro, atordoamento/recuperação, rendição; retry restaura; sem save de lutas comuns | Alta |
-| Chefes | src/entities/Boss.js, Game.hitBoss/update | Cinco perfis com aviso/investida/recuperação, hit cooldown e arena; Game coordena patada, mordida, pisão, latido, superpum, dano e bloqueio de saída | Alta |
+| Chefes | src/entities/Boss.js, Game.hitBoss/update | Cinco perfis com preparação/investida/patada ou mordida/recuperação, hit cooldown e arena; Game coordena patada, mordida, pisão, latido, superpum, dano e bloqueio de saída | Alta |
 | Build/distribuição | `scripts/build.mjs`, Vite, `.github/workflows/pages.yml` | Dois caminhos de build produzem `dist`; Vite com base relativa; workflow valida e publica dist no Pages; geração offline usa sintaxe ES modules restrita | Alta para entrega |
 | Servidor | `scripts/serve.mjs` | HTTP nativo Node sem middleware/backend; serve raiz informada e aplica MIME/404 | Alta para HTTP; dispensável no HTML offline |
 | Assets/QA | `scripts/prepare_assets.py`, `scripts/render-qa.mjs` | Pillow normaliza frames; QA troca o contexto Canvas usando harness e grava PNGs | Média |
@@ -255,7 +256,7 @@ Criticidade: **alta** impede iniciar, controlar, salvar ou concluir a aventura; 
 | QA visual | `render-qa.mjs` | Importa harness → troca contexto por canvas nativo → carrega PNGs → posiciona jogador → renderiza cinco níveis/final | Execução manual; não é screenshot de browser | Média |
 | Instalação/validação Docker | `docker/run.sh` | preflight docker version → build tests → run verify → up production --wait | Falha em qualquer etapa interrompe o script | Alta |
 | Superfrango/voo | Contato com coxa escondida | Revela na proximidade → come → power=20/impulso inicial/camisa Vasco; segurar salto ativa propulsão e gás a cada 0,45 s; soltar desce | Pausa congela; expiração/retry removem poder; sem imunidade | Alta |
-| Arena/combate | X atinge Boss.trigger, mesmo voando | Ativa arena com chão contínuo → aproxima/avisa/investe/recupera → latido frontal fora da investida, pisão com quique ou superpum tiram HP → vitória salva índice e libera saída | Chefe invicto bloqueia transição e último portão; retry reinicia luta | Alta |
+| Arena/combate | X atinge Boss.trigger, mesmo voando | Ativa arena com chão contínuo → aproxima/prepara/investe/alterna patada e mordida/recupera → latido frontal fora da investida, pisão com quique ou superpum tiram HP → vitória salva índice e libera saída | Chefe invicto bloqueia transição e último portão; retry reinicia luta | Alta |
 
 ### Regras físicas e de execução
 
@@ -362,7 +363,7 @@ LocalStorage, chave **`beethoven.save.v1`** em [src/systems/Save.js](src/systems
 | Gato | coat (tabby/tuxedo), x, y nos pés, origin, range, vx, state (stroll/watch/startled), flee; sem hitbox/dano/save |
 | Hazard | corpo, type (`glass`, `thorns`, `spikes`), estático; colisão AABB tira um coração respeitando invulnerabilidade |
 | Frango | id, x/y/w/h, eaten/revealed; dois por fase, escondidos entre folhas em plataformas; comer ativa power, retry repõe |
-| Chefe | Boss(index,end): name/kind, hp/maxHp, x/y/w/h/vy, face, left/right/trigger, active/defeated/state/timer/inv; HP 5/6/7/7/9 |
+| Chefe | Boss(index,end): name/kind, hp/maxHp, x/y/w/h/vy, face, left/right/trigger, active/defeated/state/timer/inv, nextAttack/attackDuration, attackBox frontal; HP 5/6/7/7/9 |
 | Osso | `{id,x,y}`; id liga dados da fase ao Set `Game.collected` e save.bones |
 | Checkpoint / gap / slippery | Respectivamente `{x,y}`, `{x,w}`, `{x,w}`; fase identifica a qual mapa pertencem |
 | Cena narrativa | `{place,title,text,duration}`; `place` é índice da fase usada como cenário |
@@ -376,13 +377,13 @@ Dados extraídos da factory atual; índices são zero-based e fazem parte de vá
 
 | Índice / nome | Largura | Clima | Plataformas / NPCs / hazards / ossos | Checkpoints X |
 |---|---:|---|---|---|
-| 0 — Beira-Mar de Florianópolis | 8500 | sun | 30 / 9 / 4 / 68 | 4140, 7825 |
-| 1 — Parque Costa Azul | 9500 | cloud | 34 / 10 / 5 / 77 | 4420, 8825 |
-| 2 — Passeio Pedra Branca | 11000 | rain | 40 / 11 / 6 / 90 | 5160, 10325 |
-| 3 — Caminho Novo | 9500 | drizzle | 34 / 10 / 5 / 77 | 4420, 8825 |
-| 4 — Terra Nova | 6000 | sunset | 20 / 6 / 3 / 45 | 2760, 5325 |
+| 0 — Beira-Mar de Florianópolis | 8500 | sun | 30 / 9 / 4 / 68 | 4140 |
+| 1 — Parque Costa Azul | 9500 | cloud | 34 / 10 / 5 / 77 | 4420 |
+| 2 — Passeio Pedra Branca | 11000 | rain | 40 / 11 / 6 / 90 | 5160 |
+| 3 — Caminho Novo | 9500 | drizzle | 34 / 10 / 5 / 77 | 4420 |
+| 4 — Terra Nova | 6000 | sunset | 20 / 6 / 3 / 45 | 2760 |
 
-A factory repete padrões a cada 340 px, usa `n % 5`, cria chão com lacunas e marca a saída em `width-120`. Só o parque cria plataformas móveis; só índices 2/3 criam pisos escorregadios. Todas as fases têm perigos estáticos e dois frangos; o trecho final tem chão contínuo para a arena e dois checkpoints por fase. Não existe validação do argumento `index` na factory.
+A factory repete padrões a cada 340 px, usa `n % 5`, cria chão com lacunas e marca a saída em `width-120`. Só o parque cria plataformas móveis; só índices 2/3 criam pisos escorregadios. Todas as fases têm perigos estáticos e dois frangos; o trecho final tem chão contínuo para a arena e um checkpoint por fase. Não existe validação do argumento `index` na factory.
 
 ### Dados visuais
 
@@ -461,6 +462,8 @@ Perfis/permissões do Codex, instalação de Docker no host e permissões do soc
 
 ## Testes
 
+`tests/improvements.test.mjs` registra chamadas Canvas para verificar o espelhamento do latido, texto único da placa sem sombra e ausência dos avisos de piso/chefe.
+
 | Arquivo | Runner / cobertura efetiva |
 |---|---|
 | [tests/logic.test.mjs](tests/logic.test.mjs) | 4 casos Node: save/versionamento/deduplicação, movimento e altura variável, coyote/buffer, geometria/checkpoints das cinco fases |
@@ -472,7 +475,7 @@ Perfis/permissões do Codex, instalação de Docker no host e permissões do soc
 | [tests/cases/saveCases.mjs](tests/cases/saveCases.mjs) | Escrita/leitura de checkpoint/configurações, reset, JSON inválido e storage recusado |
 | [tests/harness.mjs](tests/harness.mjs) | DOM/Image/Canvas/RAF e LocalStorage substitutos; importa main.js, exporta instâncias e tick/draw; não simula browser completo |
 | [tests/e2e.mjs](tests/e2e.mjs) | Chromium real: menu/assets, intro/skip, movimento/corrida, pulo/chão, mute/pause, reload/continuar, reset; E2E_FULL inclui cinco fases/final. Reinício aguarda intro/play; mute aguarda o rótulo após KeyM, sincronizando leituras com o loop de simulação |
-| [tests/power-boss.test.mjs](tests/power-boss.test.mjs) | 9 casos Node: distribuição, poder/pausa/expiração, hazards, ciclo do chefe, dano, saída bloqueada e retry/save |
+| [tests/power-boss.test.mjs](tests/power-boss.test.mjs) | 11 casos Node: golpes dos cinco chefes, janelas/direção/dano, distribuição, poder/pausa/expiração, hazards, ciclo do chefe, dano, saída bloqueada e retry/save |
 | [tests/melee.test.mjs](tests/melee.test.mjs) | 8 casos Node: preparação/alcance/direção/altura, acerto único por golpe, recarga, dano/rendição, IA/contato, patada/mordida nos cinco chefes, pausa/retry/save e reforço da camisa; gatos neutros preservados |
 | [tests/combat-browser.mjs](tests/combat-browser.mjs) | 5 checks em fixture interceptada do HTML offline: J/K reais vencem rival e atingem os cinco chefes; coleta por salto/voo/pausa/expiração; cinco vitórias por teclas sem poder; multitoque de voo/HUD; Run+Patada/cancelamento e Morder móvel. Posições escolhidas na fixture; sem API mutável em produção |
 | [tests/pages.mjs](tests/pages.mjs) | Chromium desktop/móvel em /beethoven/ com raiz retornando 404; nove imagens HD, início/movimento, link inicial, corrida por toque/rotação e HTML offline. Requer dist e Chromium; gera pages-report.json |
@@ -481,7 +484,13 @@ Perfis/permissões do Codex, instalação de Docker no host e permissões do soc
 | [tests/story-render.test.mjs](tests/story-render.test.mjs) | 3 casos Node: Run sozinho/sentido/soltura, timeline de passeio/guia/fuga e fase periódica para câmera negativa/distante |
 | [tests/parallax-family.mjs](tests/parallax-family.mjs) | 3 checks Chromium: quarto atlas/alturas humanas, comparação de pixels de emenda e limite temporal em cinco fundos, capturas da abertura em fixture offline temporal. E2E_BASE_URL usa o HTML offline do serviço, não dist antigo do container |
 
-### Estado atual — patadas, mordidas e rivais, 2026-11-08
+### Estado atual — melhorias de combate e sinalização, 2026-11-25
+
+- Typecheck/build Vite/offline, dois Vitest e 36 testes Node aprovados. Travessia simulada completa: 366 s, 72 ossos, um retry.
+- Cinco checks Chromium de combate aprovados, incluindo vitória contra os cinco chefes e multitoque móvel. Regressões Canvas validam direções do latido, placa sem sombra e ausência dos avisos.
+- Build validado em container com os fontes/assets atuais. Sem deploy, inspeção visual manual, teste físico/Safari ou nova execução das suítes gerais de layout/Pages nesta tarefa.
+
+### Histórico — patadas, mordidas e rivais, 2026-11-08
 
 - Build/typecheck, dois Vitest e 32 Node aprovados, incluindo oito novos casos de combate próximo. Travessia simulada completa: 337 s, 72 ossos, zero retries.
 - Chromium: sete E2E curtos, nove checks visuais/móveis/fullscreen, cinco checks de combate e três Pages aprovados. J/K testados contra os cinco chefes e rival; multitoque Run+Patada, cancelamento e Morder por toque; controles ≥56 px/espaços ≥16 px em telas a partir de 320×568. Capturas inspecionadas; nenhum pageerror.
@@ -614,6 +623,13 @@ A .dockerignore exclui Git/configurações protegidas, node_modules, dist/result
 Os débitos de arquitetura/arte continuam documentados; a tarefa de disponibilização corrigiu a sincronização do teste de reinício e iniciou o serviço local. Nenhum valor de secret/credencial foi copiado para o documento.
 
 ## Última Atualização
+
+### Correções de combate e sinalização — 2026-11-25
+
+- Branch feat/improvements. levels.js mantém somente a bandeira intermediária; saves da bandeira pré-arena migram para ela pelo fluxo existente de start.
+- Boss alterna patada/mordida após investida; attackBox frontal aplica dano apenas na janela ativa. Contato parado não causa dano; pisão e contato na investida permanecem. Renderer reutiliza atlas e desenha pata/mandíbula em Canvas, sem assets novos.
+- Renderer espelha o arco do latido junto com face, remove textos MOLHADO/VAI INVESTIR/AGORA e faixa de aviso do chefe. Placa CAMINHO sem sombra; sombra genérica aproximada a 0,5 px. Piso escorregadio permanece funcional. Ajuda e hints refletem uma bandeira.
+- power-boss.test.mjs atualizado para checkpoint único, migração do save antigo e ciclo com patada. Build/typecheck, dois Vitest e 36 testes Node aprovados; travessia simulada de 366 s, 72 ossos, um retry. Fixture Chromium passa a iniciar junto ao trigger da arena, sem depender do checkpoint removido; cinco checks de combate Chromium aprovados, com vitória nos cinco chefes e multitoque. README e GAME_DESIGN atualizados. Sem deploy ou inspeção visual manual nesta tarefa.
 
 ### Patadas, mordidas e lutas com rivais — 2026-11-08, America/Sao_Paulo
 

@@ -9,7 +9,7 @@ const themes=[
  ['Terra Nova','Finalmente em casa','backgrounds/terra-nova/05_terra_nova_palhoca-hd.png',6000,'sunset','O portão de casa! Use E para chamar Elomir e Júlia.']];
 export function makeLevel(index){const [name,subtitle,bg,width,weather,story]=themes[index];const platforms=[],hazards=[],dogs=[],cats=[],bones=[],checkpoints=[],gaps=[],slippery=[],chickens=[];let id=0;
  const end=width-120,boss=new Boss(index,end);
- // Reserve solid, hazard-free ground for the final checkpoint and boss arena.
+ // Reserve solid, hazard-free ground for the boss arena.
  for(let x=420,n=0;x<end-1000;x+=340,n++){
   const section=n%5;const height=section===2?170:section===3?177:194;
   platforms.push({x:x+40,y:height,w:section===2?105:80,h:10,oneWay:true,moving:index===1&&section===2,origin:x+40,phase:n});
@@ -24,7 +24,7 @@ export function makeLevel(index){const [name,subtitle,bg,width,weather,story]=th
  let start=0;const ground=[];for(const g of gaps){ground.push({x:start,y:222,w:g.x-start,h:80});start=g.x+g.w}ground.push({x:start,y:222,w:width-start,h:80});
  const safe=x=>ground.some(s=>x-45>=s.x&&x+72<=s.x+s.w)&&!hazards.some(h=>Math.abs(h.x-x)<85)&&!dogs.some(d=>Math.abs(d.origin-x)<d.range+90);
  let middle=Math.round(width*.46/10)*10;while(!safe(middle))middle+=10;
- checkpoints.push({x:middle,y:222},{x:end-555,y:222});
+ checkpoints.push({x:middle,y:222});
  platforms.push({x:end-720,y:176,w:100,h:10,oneWay:true});
  chickens.push({id:`chicken-${index}-1`,x:end-678,y:158,w:16,h:16,eaten:false,revealed:false});
  for(let x=260,n=0;x<end-900;x+=1300,n++){

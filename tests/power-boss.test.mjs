@@ -9,13 +9,13 @@ import {game as g,save,tick,draw} from './harness.mjs';
 const keys=held=>({has:(...ks)=>ks.some(k=>held.includes(k)),hit:()=>false}),silent={sfx(){}};
 function start(index=0){save.reset();g.collected.clear();g.start(index)}
 
-test('cinco arenas seguras, três perigos cortantes, duas coxas e só dois checkpoints por fase',()=>{
+test('cinco arenas seguras, três perigos cortantes, duas coxas e um checkpoint por fase',()=>{
  for(let i=0;i<5;i++){
-  const l=makeLevel(i);assert.equal(l.checkpoints.length,2);assert.equal(l.chickens.length,2);
+  const l=makeLevel(i);assert.equal(l.checkpoints.length,1);assert.equal(l.chickens.length,2);
   assert.deepEqual(new Set(l.hazards.map(h=>h.type)),new Set(['glass','thorns','spikes']));
   assert(l.ground.some(s=>s.x<=l.boss.left&&s.x+s.w>=l.end));
   assert(l.hazards.every(h=>h.x+h.w<l.boss.left));
-  assert(l.checkpoints[1].x<l.boss.trigger&&l.checkpoints[1].x>l.chickens[1].x);
+  assert(l.checkpoints[0].x<l.chickens[1].x);
   assert(l.chickens.every(c=>l.platforms.some(s=>c.x>=s.x&&c.x+c.w<=s.x+s.w&&c.y+c.h<=s.y+1)));
  }
  assert.equal(makeLevel(2).boss.kind,'rat');
@@ -51,7 +51,7 @@ test('chefe sinaliza investida, recupera, respeita invulnerabilidade e não pode
  const b=new Boss(0,1000);b.active=true;const p=new Beethoven(650);
  b.update(.01,p);b.update(.81,p);assert.equal(b.state,'windup');
  const warning=b.timer;assert(b.hit());assert.equal(b.state,'windup');assert.equal(b.timer,warning);assert(!b.hit());
- b.update(1,p);assert.equal(b.state,'charge');b.update(.8,p);assert.equal(b.state,'recover');
+ b.update(1,p);assert.equal(b.state,'charge');b.update(.8,p);assert.equal(b.state,'paw');b.update(.6,p);assert.equal(b.state,'recover');
  assert.equal(b.hp,b.maxHp-1);
 });
 
@@ -84,13 +84,35 @@ test('voar não pula o chefe; todas as saídas e o portão exigem vitória',()=>
 });
 
 test('retry restaura a luta; vitória e checkpoints antigos sobrevivem a recarga; novo jogo limpa',()=>{
- start(2);const l=g.level,b=l.boss,cp=l.checkpoints[1];g.checkpoint=cp.x;save.data.checkpoint=cp.x;
+ start(2);const l=g.level,b=l.boss,cp=l.checkpoints[0];g.checkpoint=cp.x;save.data.checkpoint=cp.x;
  b.active=true;g.hitBoss();g.retry();assert.equal(b.hp,b.maxHp);assert(!b.active);assert.equal(g.player.x,cp.x);
  b.active=true;while(!b.defeated){b.inv=0;g.hitBoss()}
  const restored=new Save();assert(restored.data.bosses.includes(2));
  g.start(2,true);assert(g.level.boss.defeated);assert.equal(g.checkpoint,cp.x);
- save.data.checkpoint=cp.x+50;g.start(2,true);assert.equal(g.checkpoint,cp.x);
+ save.data.checkpoint=l.end-555;g.start(2,true);assert.equal(g.checkpoint,cp.x);
  save.reset();assert.deepEqual(save.data.bosses,[]);g.start(2);assert(!g.level.boss.defeated);
  const old={...fresh()};delete old.bosses;assert.deepEqual(validate(old).bosses,[]);
  assert.deepEqual(validate({...fresh(),bosses:[2,2,9,-1,'1',1]}).bosses,[2,1]);
+});
+
+test('todos os chefes alternam patada e mordida com janela e alcance frontal',()=>{
+ for(let i=0;i<5;i++){
+  const b=new Boss(i,1000),p=new Beethoven(650);b.active=true;
+  for(const kind of ['paw','bite']){
+   b.state='charge';b.timer=0;b.update(.01,p);assert.equal(b.state,kind);
+   assert.equal(b.attackBox(),null);b.update(.2,p);const box=b.attackBox();assert(box);
+   assert.equal(b.face,-1);assert(box.x<b.x);assert(box.x+box.w<=b.x+5);
+   b.face=1;assert.equal(b.attackBox().x,b.x+b.w-5);
+   b.update(.5,p);assert.equal(b.state,'recover');assert.equal(b.attackBox(),null);
+  }
+ }
+});
+
+test('golpes do chefe ferem durante a janela ativa e respeitam invulnerabilidade e direção',()=>{
+ for(const kind of ['paw','bite']){
+  start();const b=g.level.boss;b.active=true;b.state=kind;b.attackDuration=.6;b.timer=.6;b.face=-1;
+  g.player.x=b.x-25;g.player.y=199;tick();assert.equal(g.player.hp,3);
+  b.timer=.35;tick();assert.equal(g.player.hp,2);tick();assert.equal(g.player.hp,2);
+  g.player.inv=0;b.face=1;tick();assert.equal(g.player.hp,2);
+ }
 });

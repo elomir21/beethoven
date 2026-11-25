@@ -58,7 +58,7 @@ try{
  });
  await check('Cinco chefes vencidos por teclas, sem poder ou alteração de vida',async()=>{
   for(let index=0;index<5;index++){
-   await page.evaluate(index=>{const {game,save}=window.__combatQA;save.reset();game.start(index);game.player.x=game.level.checkpoints[1].x-5;game.player.y=199;game.player.grounded=true;game.cam=game.player.x-180},index);
+   await page.evaluate(index=>{const {game,save}=window.__combatQA;save.reset();game.start(index);game.player.x=game.level.boss.trigger-65;game.player.y=199;game.player.grounded=true;game.cam=game.player.x-180},index);
    await page.keyboard.down('KeyD');let lastBark=0,lastJump=0,holdUntil=0,retries=0;const started=Date.now(),deadline=started+90000;
    while(Date.now()<deadline){
     const p=await snapshot(),b=p.boss;if(b.defeated)break;
